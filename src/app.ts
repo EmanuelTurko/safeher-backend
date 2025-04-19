@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const app = express();
 
 app.get('/test', (req,res) => {
-    res.send('Test');
+    res.json({ message: 'Test123'});
 });
 
 
