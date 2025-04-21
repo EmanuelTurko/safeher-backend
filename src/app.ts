@@ -1,17 +1,11 @@
-import express from 'express';
-import mongoose from 'mongoose';
-
-const app = express();
-
-app.use(express.json());
-
-const authRoutes = require('./routes/authRoutes');
-
-app.use('/api/auth', authRoutes);
+import appInit from './server';
 
 
-app.get('/test', (req,res) => {
-    res.json({ message: 'Test123'});
-});
-
-export default app;
+const init = async () => {
+    const app = await appInit();
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Listening on port ${PORT}`);
+    });
+}
+init().then(() => console.log("Server started")).catch((err:any) => console.log("error:", err));

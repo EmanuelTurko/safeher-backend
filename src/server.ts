@@ -1,25 +1,44 @@
+import express, {Express} from 'express'
+import mongoose from 'mongoose'
 import dotenv from 'dotenv';
+import bodyParser from 'body-parser'
+import authRoutes from './routes/authRoutes';
 dotenv.config(); 
 
-import app from './app';
-import mongoose from 'mongoose';
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-const PORT = process.env.PORT || 3000;
+app.use('/api/auth', authRoutes);
 
-const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI as string);
-        console.log(' MongoDB connected');
-    } catch (error) {
-        console.error(' MongoDB connection error:', error);
-        process.exit(1); 
-    }
+
+const appInit = async () => {
+    return new Promise<Express>((resolve, reject) => {
+        const db = mongoose.connection;
+        db.on("error", (err) => {
+            console.error("MongoDB connection error:", err);
+            reject(err);
+        });
+        db.once("open", () => {
+            console.log("MongoDB connected");
+        });
+        if (process.env.MONGO_URL === undefined) {
+            console.error("Set up MONGO_URL in env file");
+            reject(new Error("MONGO_URL not found"));
+        } else {
+            mongoose.connect(process.env.MONGO_URL).then(() => {
+                console.log("appInit finish");
+                resolve(app);
+            }).catch(err => {
+                console.error("Failed to connect to MongoDB:", err);
+                reject(err);
+            });
+        }
+    });
 };
-connectDB();
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+export default appInit;
+
 
 
 
