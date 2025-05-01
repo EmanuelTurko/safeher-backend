@@ -11,3 +11,5 @@ postRouter.post("/", authMiddleware, createPost);
 
 // Add a comment to a post
 postRouter.post("/:postId/comment", authMiddleware, createComment);
+
+export default postRouter;
