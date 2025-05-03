@@ -45,37 +45,10 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
-/**
- * @swagger
- * /api/user/all:
- *   get:
- *     summary: Get all users
- *     description: Returns a list of all users with basic information.
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of users
- *       500:
- *         description: Server error
- */
 userRouter.get("/all", authMiddleware, getAllUsers);
 
-/**
- * @swagger
- * /api/user/update-profile/{userId}:
- *   put:
- *     summary: Update a user's profile
- *     description: Allows an authenticated user to update their profile.
- */
 userRouter.put("/update-profile/:userId", authMiddleware, (req, res) => updateUserProfile(req as AuthenticatedRequest, res));
 
-/**
- * @swagger
- * /api/user/upload-profile-picture/{userId}:
- *   post:
- *     summary: Upload a user's profile picture
- */
 userRouter.post(
   "/upload-profile-picture/:userId",
   authMiddleware,
@@ -97,29 +70,6 @@ userRouter.post(
   (req, res) => uploadProfilePicture(req as AuthenticatedRequest, res)
 );
 
-/**
- * @swagger
- * /api/user/{userId}:
- *   get:
- *     summary: Get a user's public profile
- *     description: Returns public information about a user
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the user to retrieve
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User profile retrieved successfully
- *       404:
- *         description: User not found
- *       500:
- *         description: Server error
- */
 userRouter.get("/:userId", authMiddleware, (req, res) => {
   console.log(`GET user profile request for userId: ${req.params.userId}`);
   getUserPublicProfile(req, res);

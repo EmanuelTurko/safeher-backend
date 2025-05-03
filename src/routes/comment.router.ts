@@ -6,46 +6,6 @@ import PostModel from "../models/Post.model";
 
 export const commentRouter = express.Router();
 
-/**
- * @swagger
- * tags:
- *   name: Comments
- *   description: API endpoints for managing comments
- */
-
-/**
- * @swagger
- * /api/comment/{commentId}:
- *   put:
- *     summary: Edit a comment
- *     tags: [Comments]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: commentId
- *         schema:
- *           type: string
- *         required: true
- *         description: The ID of the comment to edit
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               body:
- *                 type: string
- *                 description: The updated text of the comment
- *     responses:
- *       200:
- *         description: Comment edited successfully
- *       403:
- *         description: Unauthorized - can only edit your own comments
- *       404:
- *         description: Comment not found
- */
 commentRouter.put("/:commentId", authMiddleware, async (req: express.Request, res: Response): Promise<void> => {
   try {
     const commentId = req.params.commentId;
@@ -79,29 +39,6 @@ commentRouter.put("/:commentId", authMiddleware, async (req: express.Request, re
   }
 });
 
-/**
- * @swagger
- * /api/comment/{commentId}:
- *   delete:
- *     summary: Delete a comment
- *     tags: [Comments]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: commentId
- *         schema:
- *           type: string
- *         required: true
- *         description: The ID of the comment to delete
- *     responses:
- *       200:
- *         description: Comment deleted successfully
- *       403:
- *         description: Unauthorized - can only delete your own comments
- *       404:
- *         description: Comment not found
- */
 commentRouter.delete("/:commentId", authMiddleware, async (req: express.Request, res: Response): Promise<void> => {
   try {
     const commentId = req.params.commentId;

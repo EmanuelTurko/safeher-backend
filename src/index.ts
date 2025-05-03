@@ -1,7 +1,6 @@
 import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import connectDB from "./config/db";
-import { setupSwagger } from "./config/swagger";
 import { authRouter } from "./routes/auth.router";
 import { userRouter } from "./routes/user.router";
 import { postRouter } from "./routes/post.router";
@@ -42,8 +41,6 @@ export const appPromise = new Promise<[Express, Server<typeof IncomingMessage, t
     app.use("/api/user", userRouter);
     app.use("/api/post", postRouter);
     app.use("/api/comment", commentRouter);
-
-    setupSwagger(app);
 
     // Start Express server
     const isProd = process.env.NODE_ENV === "production";
