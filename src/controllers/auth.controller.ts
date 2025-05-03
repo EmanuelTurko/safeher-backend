@@ -60,9 +60,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    res.status(400).json({ message: "Please provide email and password" });
+     res.status(400).json({
+      message: "Please provide email and password",
+      error: "ValidationError",
+      data: null
+    });
   }
-
+  console.log("Logging in with email:", email);
   try {
     const userExists = await User.findOne({ email }).select("+password");
     if (!userExists) {
@@ -72,8 +76,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       const isPasswordMatching = await userExists.comparePassword(password);
       if (isPasswordMatching) {
         const token = signJwt((userExists as IUser)._id!.toString());
-        console.log("User logged in successfully");
-        res.status(200).json({ token });
+        res.status(200).json({
+          message: "Successfully logged in",
+          data: {
+            id: userExists._id,
+            fullName: userExists.fullName,
+            email: userExists.email,
+            phoneNumber: userExists.phoneNumber,
+            birthDate: userExists.birthDate,
+            idPhotoUrl: userExists.idPhotoUrl,
+          },
+        });
       } else {
         res.status(401).json({ message: "Invalid credentials" });
       }
