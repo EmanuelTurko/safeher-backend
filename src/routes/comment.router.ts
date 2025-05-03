@@ -1,15 +1,15 @@
-import { authMiddleware } from "../middleware/auth.middleware";
 import express from "express";
+import { AuthenticatedRequest, authMiddleware } from "../middleware/auth.middleware";
 import { Response } from "express";
-import CommentsModel from "../models/CommentsModel";
-import PostModel from "../models/PostModel";
+import CommentsModel from "../models/Comments.model";
+import PostModel from "../models/Post.model";
 
 export const commentRouter = express.Router();
 
 commentRouter.put("/:commentId", authMiddleware, async (req: express.Request, res: Response): Promise<void> => {
   try {
     const commentId = req.params.commentId;
-    const userId = (req as any).user.id;
+    const userId = (req as AuthenticatedRequest).user.id;
     const { body } = req.body;
 
     if (!body || body.trim() === "") {
@@ -42,7 +42,7 @@ commentRouter.put("/:commentId", authMiddleware, async (req: express.Request, re
 commentRouter.delete("/:commentId", authMiddleware, async (req: express.Request, res: Response): Promise<void> => {
   try {
     const commentId = req.params.commentId;
-    const userId = (req as any).user.id;
+    const userId = (req as AuthenticatedRequest).user.id;
 
     const comment = await CommentsModel.findById(commentId);
 
@@ -58,7 +58,7 @@ commentRouter.delete("/:commentId", authMiddleware, async (req: express.Request,
     }
 
     // Remove the comment reference from the post
-    await PostModel.findByIdAndUpdate(comment.postId, {
+    await PostModel.findByIdAndUpdate(comment.post, {
       $pull: { comments: commentId },
     });
 

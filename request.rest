@@ -1,20 +1,93 @@
-### Register a new user
-POST http://localhost:3000/api/auth/register
+### User Registration
+POST http://localhost:3001/api/auth/register
 Content-Type: application/json
 
 {
-  "fullName": "Dana Cohen",
-  "email": "testuser@example.com",
-  "password": "Password123!",
-  "phoneNumber": "0501234567",
-  "idPhotoUrl": "https://yourserver.com/photos/id-photo.jpg"
+  "email": "example@example.com",
+  "fullName": "user123",
+  "password": "password123"
 }
 
-### Login an existing user
-POST http://localhost:3000/api/auth/login
+### User Login
+POST http://localhost:3001/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "testuser@example.com",
-  "password": "Password123!"
+  "email": "example@example.com",
+  "password": "password123"
 }
+
+### Google Login or Register
+POST http://localhost:3001/api/auth/login-with-google
+Content-Type: application/json
+
+{
+  "email": "example@example.com",
+  "fullName": "user123"
+}
+
+### Get Authenticated User Profile
+GET http://localhost:3001/api/auth/check
+Authorization: Bearer {auth_token}
+
+### Get All Posts
+GET http://localhost:3001/api/post
+Authorization: Bearer {auth_token}
+
+### Create a New Post
+POST http://localhost:3001/api/post
+Authorization: Bearer {auth_token}
+Content-Type: application/json
+
+{
+  "body": "This is a new post",
+  "imageUrl": "http://example.com/image.jpg"
+}
+
+### Edit a Post
+PUT http://localhost:3001/api/post/{postId}
+Authorization: Bearer {auth_token}
+Content-Type: application/json
+
+{
+  "body": "Updated post content",
+  "imageUrl": "http://example.com/new-image.jpg"
+}
+
+### Delete a Post
+DELETE http://localhost:3001/api/post/{postId}
+Authorization: Bearer {auth_token}
+
+### Get User's Posts
+GET http://localhost:3001/api/post/user
+Authorization: Bearer {auth_token}
+
+### Get Favorite Posts
+GET http://localhost:3001/api/post/favorites
+Authorization: Bearer {auth_token}
+
+### Like a Post
+POST http://localhost:3001/api/post/{postId}/like
+Authorization: Bearer {auth_token}
+
+### Create a Comment on a Post
+POST http://localhost:3001/api/comment/{postId}
+Authorization: Bearer {auth_token}
+Content-Type: application/json
+
+{
+  "body": "This is a comment"
+}
+
+### Edit a Comment
+PUT http://localhost:3001/api/comment/{commentId}
+Authorization: Bearer {auth_token}
+Content-Type: application/json
+
+{
+  "body": "Updated comment text"
+}
+
+### Delete a Comment
+DELETE http://localhost:3001/api/comment/{commentId}
+Authorization: Bearer {auth_token}
