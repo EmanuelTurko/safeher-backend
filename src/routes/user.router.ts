@@ -45,10 +45,13 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
+// Get all users
 userRouter.get("/all", authMiddleware, getAllUsers);
 
+// Update user profile
 userRouter.put("/update-profile/:userId", authMiddleware, (req, res) => updateUserProfile(req as AuthenticatedRequest, res));
 
+// Upload profile picture
 userRouter.post(
   "/upload-profile-picture/:userId",
   authMiddleware,
@@ -70,6 +73,7 @@ userRouter.post(
   (req, res) => uploadProfilePicture(req as AuthenticatedRequest, res)
 );
 
+// Get public user profile
 userRouter.get("/:userId", authMiddleware, (req, res) => {
   console.log(`GET user profile request for userId: ${req.params.userId}`);
   getUserPublicProfile(req, res);

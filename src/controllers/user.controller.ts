@@ -15,7 +15,15 @@ export const getUserProfile = async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    res.status(200).json(user);
+    // Returning all relevant fields
+    res.status(200).json({
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      profilePicture: user.profilePicture,
+      birthDate: user.birthDate,
+      idPhotoUrl: user.idPhotoUrl,
+    });
   } catch (error) {
     console.error("Error fetching profile:", error);
     res.status(500).json({ message: "Server error" });
@@ -26,7 +34,7 @@ export const getUserProfile = async (req: AuthenticatedRequest, res: Response): 
 export const updateUserProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
-    const { fullName, profilePicture } = req.body;
+    const { fullName, profilePicture, phoneNumber, email } = req.body; // Removed birthDate
 
     if (req.user.id !== userId) {
       res.status(403).json({ message: "Not authorized to update this profile" });
@@ -41,6 +49,17 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
 
     if (fullName) user.fullName = fullName;
     if (profilePicture) user.profilePicture = profilePicture;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (email) user.email = email;
+
+    // Check if email is unique
+    if (email && email !== user.email) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
+        res.status(400).json({ message: "Email already in use" });
+        return;
+      }
+    }
 
     await user.save();
     res.status(200).json({ message: "Profile updated successfully", user });
@@ -50,7 +69,7 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
   }
 };
 
-//Upload profile picture
+// Upload profile picture
 export const uploadProfilePicture = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -72,11 +91,12 @@ export const uploadProfilePicture = async (req: AuthenticatedRequest, res: Respo
 
     const user = await User.findById(userId);
     if (!user) {
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(filePath); // Remove the file if user doesn't exist
       res.status(404).json({ message: "User not found" });
       return;
     }
 
+    // Remove old profile picture if exists
     if (user.profilePicture) {
       const oldFilePath = user.profilePicture.replace(`${baseUrl}/`, "");
       const fullOldPath = path.join(__dirname, "..", "..", oldFilePath);
@@ -99,6 +119,7 @@ export const uploadProfilePicture = async (req: AuthenticatedRequest, res: Respo
   }
 };
 
+// Get user public profile
 export const getUserPublicProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -121,7 +142,7 @@ export const getUserPublicProfile = async (req: Request, res: Response): Promise
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     // Exclude password and select only necessary fields for display
-    const users = await User.find().select("fullName profilePicture _id");
+    const users = await User.find().select("fullName profilePicture phoneNumber birthDate _id");
 
     res.status(200).json(users);
   } catch (error) {

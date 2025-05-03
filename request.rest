@@ -5,7 +5,8 @@ Content-Type: application/json
 {
   "email": "example@example.com",
   "fullName": "user123",
-  "password": "password123"
+  "password": "password123",
+  "phoneNumber": "0526372223"
 }
 
 ### User Login
@@ -15,15 +16,6 @@ Content-Type: application/json
 {
   "email": "example@example.com",
   "password": "password123"
-}
-
-### Google Login or Register
-POST http://localhost:3001/api/auth/login-with-google
-Content-Type: application/json
-
-{
-  "email": "example@example.com",
-  "fullName": "user123"
 }
 
 ### Get Authenticated User Profile

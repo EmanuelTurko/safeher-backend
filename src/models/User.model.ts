@@ -4,10 +4,10 @@ import bcrypt from "bcryptjs";
 export interface IUser extends Document {
   fullName: string;
   email: string;
-  password?: string;
+  password: string;
   profilePicture?: string;
   birthDate?: string;
-  phoneNumber?: string;
+  phoneNumber: string;
   idPhotoUrl?: string;
   authProvider?: string;
   comparePassword(password: string): Promise<boolean>;
@@ -18,13 +18,11 @@ const UserSchema: Schema = new Schema<IUser>(
     fullName: {
       type: String,
       required: true,
-      trim: true,
     },
     email: {
       type: String,
       required: true,
       unique: true,
-      trim: true,
       lowercase: true,
     },
     password: {
@@ -44,11 +42,10 @@ const UserSchema: Schema = new Schema<IUser>(
     phoneNumber: {
       type: String,
       required: true,
-      unique: true,
     },
     idPhotoUrl: {
       type: String,
-      required: true,
+      // required: true,
     },
     authProvider: {
       type: String,

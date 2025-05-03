@@ -36,7 +36,7 @@ export const loginWithGoogle = async (req: Request, res: Response): Promise<void
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, fullName, password } = req.body;
+    const { email, fullName, password, phoneNumber, idPhotoUrl } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -45,7 +45,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ fullName, email, password: hashedPassword });
+    const newUser = new User({ fullName, email, password: hashedPassword, phoneNumber, idPhotoUrl });
     await newUser.save();
 
     const token = signJwt((newUser as IUser)._id!.toString());
@@ -72,6 +72,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       const isPasswordMatching = await userExists.comparePassword(password);
       if (isPasswordMatching) {
         const token = signJwt((userExists as IUser)._id!.toString());
+        console.log("User logged in successfully");
         res.status(200).json({ token });
       } else {
         res.status(401).json({ message: "Invalid credentials" });
