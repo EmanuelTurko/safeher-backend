@@ -4,6 +4,33 @@ import fs from "fs";
 import path from "path";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 
+
+export const updateUserSafeCircle = async (req: Request, res: Response): Promise<void> => {
+  try{
+    console.log(req.body);
+    const { fullName, safeCircle} = req.body;
+    console.log("fullName:",fullName);
+    console.log("safeCircle: ",safeCircle);
+
+    if (!Array.isArray(safeCircle) || !safeCircle.every((contact: any) => typeof contact === "string")) {
+      res.status(400).json({ message: "safeCircle must be an array of phone numbers" });
+      return;
+    }
+    const user = await User.findOne({ fullName });
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    user.safeCircleContacts  = safeCircle;
+    console.log("user safe circle: ",user.safeCircleContacts);
+    await user.save();
+    res.status(200).json({ message: "Safe circle updated successfully" });
+
+  } catch (error) {
+    console.error("Error updating safe circle:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
 // Get user profile
 export const getUserProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
