@@ -22,7 +22,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
   console.log(`POST create-post request for userId: ${req.user.id}`);
   const newPost = new PostModel({
     user: req.user.id,
-    body: req.body.body,
+    body: req.body.text,
     image: req.body.imageUrl,
   });
   await newPost.save();
@@ -32,7 +32,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
 
 export const editPost = async (req: AuthenticatedRequest, res: Response) => {
   console.log(`PUT edit-post request for userId: ${req.user.id}`);
-  await PostModel.findByIdAndUpdate(req.params.postId, { body: req.body.body, image: req.body.imageUrl }).exec();
+  await PostModel.findByIdAndUpdate(req.params.postId, { body: req.body.text, image: req.body.imageUrl }).exec();
 
   res.status(200).json({ message: "Post edited successfully" });
 };
