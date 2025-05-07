@@ -3,9 +3,11 @@ import User from "../models/User.model";
 import fs from "fs";
 import path from "path";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import {sendWhatsAppMessage} from "../services/whatsapp";
 
 
 export const updateUserSafeCircle = async (req: Request, res: Response): Promise<void> => {
+  console.log("updateUserSafeCircle called");
   try{
     console.log(req.body);
     const { fullName, safeCircle} = req.body;
@@ -23,12 +25,25 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
     }
     user.safeCircleContacts  = safeCircle;
     console.log("user safe circle: ",user.safeCircleContacts);
+
+    for(const contact of safeCircle){
+      const formattedContact = `+972${contact.slice(1)}`;
+      console.log("Formatted contact:", formattedContact);
+      try{
+
+      await sendWhatsAppMessage(formattedContact, "You have been added to a safe circle. Please download the app to connect with your loved ones.");
+      } catch(error){
+        console.error("Error sending WhatsApp message:", error);
+        res.status(500).json({ message: "Failed to send WhatsApp message" });
+        return;
+      }
+    }
     await user.save();
     res.status(200).json({ message: "Safe circle updated successfully" });
 
   } catch (error) {
     console.error("Error updating safe circle:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error...." });
   }
 }
 // Get user profile

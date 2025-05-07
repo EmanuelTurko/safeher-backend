@@ -9,6 +9,7 @@ export interface IUser extends Document {
   birthDate?: string;
   phoneNumber: string;
   idPhotoUrl?: string;
+  accessToken?: string;
   safeCircleContacts?: string[];
   authProvider?: string;
   comparePassword(password: string): Promise<boolean>;
@@ -47,6 +48,9 @@ const UserSchema: Schema = new Schema<IUser>(
     idPhotoUrl: {
       type: String,
       // required: true,
+    },
+    accessToken: {
+      type: String,
     },
     safeCircleContacts: {
       type: [String],

@@ -45,7 +45,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ fullName, email, password: hashedPassword, phoneNumber, idPhotoUrl });
+    const newUser = new User({ fullName, email, password: hashedPassword, phoneNumber, idPhotoUrl,accessToken: "" });
     await newUser.save();
 
     const token = signJwt((newUser as IUser)._id!.toString());
@@ -76,6 +76,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       const isPasswordMatching = await userExists.comparePassword(password);
       if (isPasswordMatching) {
         const token = signJwt((userExists as IUser)._id!.toString());
+        userExists.accessToken = token;
+        await userExists.save();
+
         res.status(200).json({
           message: "Successfully logged in",
           data: {
@@ -85,10 +88,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             phoneNumber: userExists.phoneNumber,
             birthDate: userExists.birthDate,
             idPhotoUrl: userExists.idPhotoUrl,
+            accessToken: token,
           },
         });
       } else {
-        res.status(401).json({ message: "Invalid credentials" });
+        res.status(401).json({ error: "Invalid credentials" });
       }
     }
   } catch (error) {
