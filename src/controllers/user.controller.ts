@@ -3,7 +3,8 @@ import User from "../models/User.model";
 import fs from "fs";
 import path from "path";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
-// import {sendWhatsAppMessage} from "../services/whatsapp";
+import {sendWhatsAppMessage} from "../services/whatsapp";
+
 
 export const updateUserSafeCircle = async (req: Request, res: Response): Promise<void> => {
   console.log("updateUserSafeCircle called");
@@ -28,9 +29,10 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
     for (const contact of safeCircle) {
       const formattedContact = `+972${contact.slice(1)}`;
       console.log("Formatted contact:", formattedContact);
-      try {
-        // await sendWhatsAppMessage(formattedContact, "You have been added to a safe circle. Please download the app to connect with your loved ones.");
-      } catch (error) {
+      try{
+
+      await sendWhatsAppMessage(formattedContact, "You have been added to a safe circle. Please download the app to connect with your loved ones.");
+      } catch(error){
         console.error("Error sending WhatsApp message:", error);
         res.status(500).json({ message: "Failed to send WhatsApp message" });
         return;

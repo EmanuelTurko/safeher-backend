@@ -88,6 +88,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             phoneNumber: userExists.phoneNumber,
             birthDate: userExists.birthDate,
             idPhotoUrl: userExists.idPhotoUrl,
+            safeCircleContacts: userExists.safeCircleContacts,
             accessToken: token,
           },
         });
