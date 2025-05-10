@@ -23,7 +23,6 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
   const newPost = new PostModel({
     user: req.user.id,
     body: req.body.body,
-    image: req.body.imageUrl,
   });
   await newPost.save();
 
@@ -32,7 +31,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
 
 export const editPost = async (req: AuthenticatedRequest, res: Response) => {
   console.log(`PUT edit-post request for userId: ${req.user.id}`);
-  await PostModel.findByIdAndUpdate(req.params.postId, { body: req.body.text, image: req.body.imageUrl }).exec();
+  await PostModel.findByIdAndUpdate(req.params.postId, { body: req.body.body }).exec();
 
   res.status(200).json({ message: "Post edited successfully" });
 };
@@ -48,32 +47,6 @@ export const createComment = async (req: AuthenticatedRequest, res: Response) =>
   await PostModel.findByIdAndUpdate(req.params.postId, { $push: { comments: newComment._id } }).exec();
 
   res.status(200).json({ message: "Comment created successfully" });
-};
-
-export const uploadPostPicture = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    // Check if a file was uploaded
-    if (!req.file) {
-      res.status(400).json({ message: "No file uploaded" });
-      return;
-    }
-
-    // Get the file path
-    const filePath = req.file.path;
-    const fileName = path.basename(filePath);
-
-    // Create a public URL for the file
-    const baseUrl = process.env.BASE_URL || "http://localhost:3001";
-    const imageUrl = `${baseUrl}/posts/${fileName}`;
-
-    res.status(200).json({
-      message: "Post picture uploaded successfully",
-      imageUrl,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
 };
 
 export const getUserPosts = async (req: AuthenticatedRequest, res: Response) => {

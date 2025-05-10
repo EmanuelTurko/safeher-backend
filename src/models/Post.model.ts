@@ -5,7 +5,6 @@ import { IUser } from "./User.model";
 export interface IPost extends Document {
   user: mongoose.Types.ObjectId;
   body: string;
-  image?: string;
   likes: mongoose.Types.ObjectId[];
   comments: mongoose.Types.ObjectId[];
   createdAt: Date;
@@ -22,9 +21,6 @@ const PostSchema: Schema = new Schema<IPost>(
     body: {
       type: String,
       default: "",
-    },
-    image: {
-      type: String,
     },
     likes: {
       type: [{ type: mongoose.Types.ObjectId, ref: "User" }],
