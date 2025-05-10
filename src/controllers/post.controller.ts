@@ -22,7 +22,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
   console.log(`POST create-post request for userId: ${req.user.id}`);
   const newPost = new PostModel({
     user: req.user.id,
-    body: req.body.text,
+    body: req.body.body,
     image: req.body.imageUrl,
   });
   await newPost.save();

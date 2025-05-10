@@ -10,7 +10,7 @@ commentRouter.put("/:commentId", authMiddleware, async (req: express.Request, re
   try {
     const commentId = req.params.commentId;
     const userId = (req as AuthenticatedRequest).user.id;
-    const { body } = req.body.text;
+    const { body } = req.body.body;
 
     if (!body || body.trim() === "") {
       res.status(400).json({ message: "Comment text cannot be empty" });
