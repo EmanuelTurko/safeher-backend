@@ -14,6 +14,6 @@ authRouter.post("/login", login);
 
 authRouter.post("/login-with-google", loginWithGoogle);
 
-authRouter.post("/updateUserSafeCircle", updateUserSafeCircle);
+authRouter.post("/updateUserSafeCircle",authMiddleware ,updateUserSafeCircle);
 
 authRouter.get("/check", authMiddleware, (req, res) => getUserProfile(req as AuthenticatedRequest, res));

@@ -3,48 +3,49 @@ import User from "../models/User.model";
 import fs from "fs";
 import path from "path";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
-import {sendWhatsAppMessage} from "../services/whatsapp";
+// import {sendWhatsAppMessage} from "../services/whatsapp";
 
 
+// Update Safe Circle
 export const updateUserSafeCircle = async (req: Request, res: Response): Promise<void> => {
   console.log("updateUserSafeCircle called");
-  try {
-    console.log(req.body);
-    const { fullName, safeCircle } = req.body;
-    console.log("fullName:", fullName);
-    console.log("safeCircle: ", safeCircle);
 
-    if (!Array.isArray(safeCircle) || !safeCircle.every((contact: any) => typeof contact === "string")) {
-      res.status(400).json({ message: "safeCircle must be an array of phone numbers" });
+  try {
+    const { safeCircle } = req.body;
+    console.log("Received contacts:", safeCircle);
+
+    // Validate format
+    if (
+      !Array.isArray(safeCircle) ||
+      !safeCircle.every(
+        (contact: any) =>
+          typeof contact.name === "string" &&
+          typeof contact.phoneNumber === "string"
+      )
+    ) {
+      res.status(400).json({ message: "Invalid contacts format" });
       return;
     }
-    const user = await User.findOne({ fullName });
+
+    const userId = (req as AuthenticatedRequest).user.id;
+    const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
     }
+
     user.safeCircleContacts = safeCircle;
-    console.log("user safe circle: ", user.safeCircleContacts);
-
-    for (const contact of safeCircle) {
-      const formattedContact = `+972${contact.slice(1)}`;
-      console.log("Formatted contact:", formattedContact);
-      try{
-
-      await sendWhatsAppMessage(formattedContact, "You have been added to a safe circle. Please download the app to connect with your loved ones.");
-      } catch(error){
-        console.error("Error sending WhatsApp message:", error);
-        res.status(500).json({ message: "Failed to send WhatsApp message" });
-        return;
-      }
-    }
     await user.save();
+
+    console.log("Safe circle updated successfully for user:", user.fullName);
     res.status(200).json({ message: "Safe circle updated successfully" });
   } catch (error) {
     console.error("Error updating safe circle:", error);
-    res.status(500).json({ message: "Server error...." });
+    res.status(500).json({ message: "Server error" });
   }
 };
+
+
 // Get user profile
 export const getUserProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {

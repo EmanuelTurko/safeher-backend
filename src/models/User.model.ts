@@ -10,61 +10,46 @@ export interface IUser extends Document {
   phoneNumber: string;
   idPhotoUrl?: string;
   accessToken?: string;
-  safeCircleContacts?: string[];
+  safeCircleContacts: { name: string; phoneNumber: string }[];
   authProvider?: string;
   comparePassword(password: string): Promise<boolean>;
 }
 
+const ContactSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    phoneNumber: { type: String, required: true }
+  },
+  { _id: false }
+);
+
 const UserSchema: Schema = new Schema<IUser>(
   {
-    fullName: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-    },
+    fullName: { type: String, required: true },
+    email: { type: String, required: true, unique: true, lowercase: true },
     password: {
       type: String,
       required: function (this: any): boolean {
         return this.authProvider !== "google";
       },
-      select: false,
+      select: false
     },
-    profilePicture: {
-      type: String,
-      default: "/avatar.webp",
-    },
-    birthDate: {
-      type: String,
-    },
-    phoneNumber: {
-      type: String,
-      required: true,
-    },
-    idPhotoUrl: {
-      type: String,
-      // required: true,
-    },
-    accessToken: {
-      type: String,
-    },
+    profilePicture: { type: String, default: "/avatar.webp" },
+    birthDate: { type: String },
+    phoneNumber: { type: String, required: true },
+    idPhotoUrl: { type: String },
+    accessToken: { type: String },
     safeCircleContacts: {
-      type: [String],
-      default: [],
+      type: [ContactSchema],
+      default: []
     },
     authProvider: {
       type: String,
       enum: ["local", "google"],
-      default: "local",
-    },
+      default: "local"
+    }
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 // Method to compare passwords

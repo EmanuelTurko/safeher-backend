@@ -60,43 +60,60 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-     res.status(400).json({
+    res.status(400).json({
       message: "Please provide email and password",
       error: "ValidationError",
       data: null
     });
+    return;
   }
+
   console.log("Logging in with email:", email);
+
   try {
     const userExists = await User.findOne({ email }).select("+password");
     if (!userExists) {
       res.status(404).json({ message: "Invalid email" });
+      return;
     }
-    if (userExists) {
-      const isPasswordMatching = await userExists.comparePassword(password);
-      if (isPasswordMatching) {
-        const token = signJwt((userExists as IUser)._id!.toString());
-        userExists.accessToken = token;
-        await userExists.save();
 
-        res.status(200).json({
-          message: "Successfully logged in",
-          data: {
-            id: userExists._id,
-            fullName: userExists.fullName,
-            email: userExists.email,
-            phoneNumber: userExists.phoneNumber,
-            birthDate: userExists.birthDate,
-            idPhotoUrl: userExists.idPhotoUrl,
-            safeCircleContacts: userExists.safeCircleContacts,
-            accessToken: token,
-          },
-        });
-      } else {
-        res.status(401).json({ error: "Invalid credentials" });
-      }
+    const isPasswordMatching = await userExists.comparePassword(password);
+    if (!isPasswordMatching) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
     }
+
+    const token = signJwt((userExists as IUser)._id!.toString());
+    userExists.accessToken = token;
+
+    // ✅ ניקוי safeCircleContacts לפני שמירה – מונע שגיאת ולידציה
+    if (!Array.isArray(userExists.safeCircleContacts)) {
+      userExists.safeCircleContacts = [];
+    } else {
+      userExists.safeCircleContacts = userExists.safeCircleContacts.filter(
+        contact => contact.name && contact.phoneNumber
+      );
+    }
+
+    await userExists.save();
+
+    res.status(200).json({
+      message: "Successfully logged in",
+      data: {
+        id: userExists._id,
+        fullName: userExists.fullName,
+        email: userExists.email,
+        phoneNumber: userExists.phoneNumber,
+        birthDate: userExists.birthDate,
+        idPhotoUrl: userExists.idPhotoUrl,
+        safeCircleContacts: userExists.safeCircleContacts,
+        accessToken: token,
+      },
+    });
+
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ message: "Server Error" });
   }
 };
+

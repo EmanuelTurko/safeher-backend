@@ -1,6 +1,7 @@
 import express from "express";
 import { getUserPublicProfile, updateUserProfile, uploadProfilePicture, getAllUsers } from "../controllers/user.controller";
 import { AuthenticatedRequest, authMiddleware } from "../middleware/auth.middleware";
+import { updateUserSafeCircle } from "../controllers/user.controller"; 
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -78,3 +79,7 @@ userRouter.get("/:userId", authMiddleware, (req, res) => {
   console.log(`GET user profile request for userId: ${req.params.userId}`);
   getUserPublicProfile(req, res);
 });
+
+userRouter.post("/updateUserSafeCircle", authMiddleware, (req, res) =>
+  updateUserSafeCircle(req as AuthenticatedRequest, res)
+);
