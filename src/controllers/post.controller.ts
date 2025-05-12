@@ -43,10 +43,14 @@ export const createComment = async (req: AuthenticatedRequest, res: Response) =>
     body: req.body.text,
   });
   await newComment.save();
-
   await PostModel.findByIdAndUpdate(req.params.postId, { $push: { comments: newComment._id } }).exec();
 
-  res.status(200).json({ message: "Comment created successfully" });
+  await newComment.populate("user", "fullName profilePicture");
+
+  res.status(200).json({
+    message: "Comment created successfully",
+    data: newComment,
+  });
 };
 
 export const getUserPosts = async (req: AuthenticatedRequest, res: Response) => {
