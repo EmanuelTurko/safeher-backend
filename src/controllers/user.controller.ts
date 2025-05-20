@@ -8,13 +8,11 @@ import { AuthenticatedRequest } from "../middleware/auth.middleware";
 
 // Update Safe Circle
 export const updateUserSafeCircle = async (req: Request, res: Response): Promise<void> => {
-  console.log("updateUserSafeCircle called");
+  console.log("✅ updateUserSafeCircle called");
 
   try {
     const { safeCircle } = req.body;
-    console.log("Received contacts:", safeCircle);
 
-    // Validate format
     if (
       !Array.isArray(safeCircle) ||
       !safeCircle.every(
@@ -27,17 +25,34 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
       return;
     }
 
-    const userId = (req as AuthenticatedRequest).user.id;
+    const userId = (req as any).user?.id || req.body.userId;
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
     }
 
-    user.safeCircleContacts = safeCircle;
+    const existingContacts = user.safeCircleContacts || [];
+
+    // ממפה את המספרים החדשים לצורך השוואה
+    const newNumbers = new Set(safeCircle.map(c => normalizePhone(c.phoneNumber)));
+
+    // סינון אנשי קשר קיימים שלא נמחקו
+    const preserved = existingContacts.filter(
+      c => newNumbers.has(normalizePhone(c.phoneNumber))
+    );
+
+    // סינון אנשי קשר שהתווספו חדשים
+    const toAdd = safeCircle.filter(
+      c => !preserved.some(p => normalizePhone(p.phoneNumber) === normalizePhone(c.phoneNumber))
+    );
+
+    // שילוב – מה שכבר היה ונשאר + מה שהתווסף
+    user.safeCircleContacts = [...preserved, ...toAdd];
+
     await user.save();
 
-    console.log("Safe circle updated successfully for user:", user.fullName);
+    console.log("Updated safeCircleContacts:", user.safeCircleContacts);
     res.status(200).json({ message: "Safe circle updated successfully" });
   } catch (error) {
     console.error("Error updating safe circle:", error);
@@ -45,6 +60,10 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
   }
 };
 
+// פונקציה שמנרמלת מספר טלפון (מסירה רווחים וסוגריים, הופכת 0 ל־+972)
+const normalizePhone = (phone: string) => {
+  return phone.replace(/[^0-9+]/g, "").replace(/^0/, "+972");
+};
 
 // Get user profile
 export const getUserProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
