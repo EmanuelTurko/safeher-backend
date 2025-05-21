@@ -6,7 +6,7 @@ export const postRouter = express.Router();
 
 postRouter.get("/", authMiddleware, (req, res) => {
   const authRequest = req as AuthenticatedRequest;
-  console.log(`GET post request for userId: ${authRequest.user.id}`);
+  console.log(`GET posts request for userId: ${authRequest.user.id}`);
   getPosts(authRequest, res);
 });
 

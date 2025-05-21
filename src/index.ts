@@ -7,7 +7,6 @@ import { postRouter } from "./routes/post.router";
 import { commentRouter } from "./routes/comment.router";
 import { IncomingMessage, Server, ServerResponse } from "http";
 import { twilioRouter } from "./routes/twilio.router";
-import path from "path";
 import fs from "fs";
 import https from "https";
 

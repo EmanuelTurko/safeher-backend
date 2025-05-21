@@ -33,3 +33,10 @@ const CommentSchema: Schema = new Schema<IComment>(
 );
 
 export default mongoose.model<IComment>("Comment", CommentSchema);
+
+// mongoose
+//   .model<IComment>("Comment")
+//   .deleteMany({})
+//   .then(() => {
+//     console.log("Comments deleted");
+//   });
