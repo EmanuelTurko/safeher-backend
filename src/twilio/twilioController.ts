@@ -13,6 +13,7 @@ interface DispatcherResult{
     }[],
 }
 
+
 type SendFunction = (to:string, fullName: string, ...args: any[]) => Promise<{sid:string}>;
 
 const twilioDispatcher = async (
@@ -28,10 +29,15 @@ const twilioDispatcher = async (
     if (!safeCircleContacts || safeCircleContacts.length === 0) {
         throw new Error("NO_CONTACTS_FOUND");
     }
+    const phoneNumbers = safeCircleContacts.map(contact => {
+        if (typeof contact === 'string') return contact;
+        if (typeof contact === 'object' && 'phoneNumber' in contact) return contact.phoneNumber;
+        return null;
+    }).filter((phone): phone is string => typeof phone === 'string');
 
-    const results = [];
+    const results: DispatcherResult["results"] = [];
 
-    for(const contactPhoneNumber of safeCircleContacts) {
+    for(const contactPhoneNumber of phoneNumbers) {
         try{
             const result = await sendFunction(contactPhoneNumber, fullName, ...sendArgs);
             results.push({contactPhoneNumber, status: "sent", sid: result.sid});

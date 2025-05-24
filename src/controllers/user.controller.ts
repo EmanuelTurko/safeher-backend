@@ -3,6 +3,7 @@ import User from "../models/User.model";
 import fs from "fs";
 import path from "path";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import {sendSafeCircleTemplateMessage} from "../twilio/twilioTemplateMessage";
 // import {sendWhatsAppMessage} from "../services/whatsapp";
 
 
@@ -47,6 +48,14 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
       c => !preserved.some(p => normalizePhone(p.phoneNumber) === normalizePhone(c.phoneNumber))
     );
 
+    for(const contact of toAdd){
+      try{
+        await sendSafeCircleTemplateMessage(contact.phoneNumber, user.fullName);
+        console.log(`Template message sent at ${contact.phoneNumber}`);
+      } catch (error) {
+        console.error(`Failed to send template message at ${contact.phoneNumber}:`, error);
+      }
+    }
     // שילוב – מה שכבר היה ונשאר + מה שהתווסף
     user.safeCircleContacts = [...preserved, ...toAdd];
 

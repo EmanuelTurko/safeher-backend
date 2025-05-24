@@ -85,15 +85,9 @@ Authorization: Bearer {auth_token}
 
 
 ###
-POST https://graph.facebook.com/v22.0/570249219514789/messages
-Authorization: Bearer EAAaJWZCxpt3QBO7qGc3QQcZA9GDL5GwXUCIZBEUnc6QSDwoKYgFRPUTkAWHJfcZCplOX1MAZCBrHL9qONj7HHMGJSB4ZAhLowNx202IFqW6gdwXqMGpUBt51qDJHKwYYQlaWftQ83Qt660WHkyZBBZCXZANbZCCUbv8EoHtECgaDytrZAjwRUPcNioJMatmPOEWGu0jHVGe2sDWUJ09p0OpKOoB0sLxxzofYjPFszIZD
+POST http://localhost:3001/api/twilio/send-template-message
 Content-Type: application/json
 
 {
-  "messaging_product": "whatsapp",
-  "to": "972526757973",
-  "type": "text",
-  "text": {
-    "body": "You have been added to a safe circle. Please download the app to connect with your loved ones."
-  }
+  "userPhoneNumber": "00000000"
 }
