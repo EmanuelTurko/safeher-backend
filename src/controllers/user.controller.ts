@@ -6,7 +6,6 @@ import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import {sendSafeCircleTemplateMessage} from "../twilio/twilioTemplateMessage";
 // import {sendWhatsAppMessage} from "../services/whatsapp";
 
-
 // Update Safe Circle
 export const updateUserSafeCircle = async (req: Request, res: Response): Promise<void> => {
   console.log("✅ updateUserSafeCircle called");
@@ -218,5 +217,17 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
   } catch (error) {
     console.error("Error fetching all users:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.params.userId;
+  try {
+    await User.findByIdAndDelete(userId);
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Failed to delete user:", error);
+    res.status(500).json({ message: "Failed to delete user" });
   }
 };

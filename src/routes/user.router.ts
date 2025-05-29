@@ -5,6 +5,7 @@ import { updateUserSafeCircle } from "../controllers/user.controller";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { deleteUser } from "../controllers/user.controller";
 
 export const userRouter = express.Router();
 
@@ -83,3 +84,5 @@ userRouter.get("/:userId", authMiddleware, (req, res) => {
 userRouter.post("/updateUserSafeCircle", authMiddleware, (req, res) =>
   updateUserSafeCircle(req as AuthenticatedRequest, res)
 );
+
+userRouter.delete("/delete/:userId", authMiddleware, deleteUser);
