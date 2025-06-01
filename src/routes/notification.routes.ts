@@ -10,7 +10,7 @@ notificationRouter.get("/my-notifications", authMiddleware, (req, res) => {
   getUserNotifications(authRequest, res);
 });
 
-notificationRouter.get("/has-unread", authMiddleware, (req, res) => {
+notificationRouter.get("/has-unread/:userId", authMiddleware, (req, res) => {
   const authRequest = req as AuthenticatedRequest;
   console.log(`GET has-unread for userId: ${authRequest.user.id}`);
   hasUnreadNotifications(authRequest, res);
