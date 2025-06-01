@@ -9,6 +9,7 @@ import { IncomingMessage, Server, ServerResponse } from "http";
 import { twilioRouter } from "./routes/twilio.router";
 import fs from "fs";
 import https from "https";
+import { notificationRouter } from "./routes/notification.routes";
 
 //Load environment variables
 require("dotenv").config();
@@ -42,6 +43,7 @@ export const appPromise = new Promise<[Express, Server<typeof IncomingMessage, t
     app.use("/api/post", postRouter);
     app.use("/api/comment", commentRouter);
     app.use("/api/twilio", twilioRouter);
+    app.use("/api/notifications", notificationRouter);
 
     // Start Express server
     const isProd = process.env.NODE_ENV === "production";

@@ -5,7 +5,7 @@ import { IUser } from "../models/User.model";
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export interface AuthenticatedRequest extends Request {
-  user: { id: string };
+  user: { id: string, fullName?: string, profilePicture?: string };
 }
 
 export const authMiddleware = (req: Request, res: Response, next: any): any => {
@@ -18,7 +18,7 @@ export const authMiddleware = (req: Request, res: Response, next: any): any => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    (req as AuthenticatedRequest).user = decoded as { id: string };
+    (req as AuthenticatedRequest).user = decoded as { id: string, fullName?: string, profilePicture?: string };
     next();
   } catch (error) {
     res.status(401).json({ message: "Invalid token" });
