@@ -92,6 +92,7 @@ export const getUserProfile = async (req: AuthenticatedRequest, res: Response): 
       profilePicture: user.profilePicture,
       birthDate: user.birthDate,
       idPhotoUrl: user.idPhotoUrl,
+      city: user.city, 
     });
   } catch (error) {
     console.error("Error fetching profile:", error);
@@ -103,7 +104,7 @@ export const getUserProfile = async (req: AuthenticatedRequest, res: Response): 
 export const updateUserProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
-    const { fullName, profilePicture, phoneNumber, email } = req.body; // Removed birthDate
+    const { fullName, profilePicture, phoneNumber, email, city } = req.body;
 
     if (req.user.id !== userId) {
       res.status(403).json({ message: "Not authorized to update this profile" });
@@ -128,6 +129,9 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
         res.status(400).json({ message: "Email already in use" });
         return;
       }
+    }
+    if (city) {
+      user.city = city;
     }
 
     await user.save();
@@ -193,7 +197,7 @@ export const getUserPublicProfile = async (req: Request, res: Response): Promise
   try {
     const { userId } = req.params;
 
-    const user = await User.findById(userId).select("fullName bio profilePicture");
+    const user = await User.findById(userId).select("fullName profilePicture city ");
 
     if (!user) {
       res.status(404).json({ message: "User not found" });
@@ -211,7 +215,7 @@ export const getUserPublicProfile = async (req: Request, res: Response): Promise
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     // Exclude password and select only necessary fields for display
-    const users = await User.find().select("fullName profilePicture phoneNumber birthDate _id");
+    const users = await User.find().select("fullName profilePicture phoneNumber birthDate _id city");
 
     res.status(200).json(users);
   } catch (error) {

@@ -36,7 +36,7 @@ export const loginWithGoogle = async (req: Request, res: Response): Promise<void
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, fullName, password, phoneNumber, idPhotoUrl } = req.body;
+    const { email, fullName, password, phoneNumber, idPhotoUrl, city } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -45,7 +45,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ fullName, email, password: hashedPassword, phoneNumber, idPhotoUrl,accessToken: "" });
+    const newUser = new User({ fullName, email, password: hashedPassword, phoneNumber, idPhotoUrl, city, accessToken: "" });
     await newUser.save();
 
     const token = signJwt((newUser as IUser)._id!.toString());
@@ -108,6 +108,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         idPhotoUrl: userExists.idPhotoUrl,
         safeCircleContacts: userExists.safeCircleContacts,
         accessToken: token,
+        city: userExists.city,
       },
     });
 

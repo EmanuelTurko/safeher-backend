@@ -3,10 +3,11 @@ POST http://localhost:3001/api/auth/register
 Content-Type: application/json
 
 {
-  "email": "example@example.com",
-  "fullName": "user123",
-  "password": "password123",
-  "phoneNumber": "0526372223"
+  "email": "example1@example.com",
+  "fullName": "user1234",
+  "password": "password1234",
+  "phoneNumber": "0526372224",
+  "city": "Tel Aviv"
 }
 
 ### User Login

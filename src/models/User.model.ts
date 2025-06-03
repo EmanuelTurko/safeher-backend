@@ -12,6 +12,7 @@ export interface IUser extends Document {
   accessToken?: string;
   safeCircleContacts: { name: string; phoneNumber: string }[];
   authProvider?: string;
+  city?: string;
   comparePassword(password: string): Promise<boolean>;
 }
 
@@ -37,6 +38,7 @@ const UserSchema: Schema = new Schema<IUser>(
     profilePicture: { type: String, default: "/avatar.webp" },
     birthDate: { type: String },
     phoneNumber: { type: String, required: true },
+    city: { type: String, default: null },
     idPhotoUrl: { type: String },
     accessToken: { type: String },
     safeCircleContacts: {
