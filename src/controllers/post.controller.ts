@@ -2,22 +2,45 @@ import path from "path";
 import mongoose from "mongoose";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { Response } from "express";
-import PostModel from "../models/Post.model";
+import PostModel, { IPost } from "../models/Post.model";
 import CommentsModel from "../models/Comments.model";
 import NotificationModel from "../models/Notification.model";
 import User from "../models/User.model";
 
 export const getPosts = async (req: AuthenticatedRequest, res: Response) => {
-  console.log(`GET post request for userId: ${req.user.id}`);
-  const page = parseInt(req.query.page as string) || 1;
-  const itemsPerPage = 10;
-  const posts = await PostModel.find()
-    .skip((page - 1) * itemsPerPage)
-    .limit(itemsPerPage)
-    .populate("user", "fullName profilePicture")
-    .populate({ path: "comments", populate: ["body", { path: "user", select: "fullName profilePicture" }] })
-    .sort({ createdAt: -1 });
-  res.status(200).json(posts);
+  try {
+    console.log(`GET post request for userId: ${req.user.id}`);
+    const page = parseInt(req.query.page as string) || 1;
+    const itemsPerPage = 10;
+
+    const posts = await PostModel.find()
+      .skip((page - 1) * itemsPerPage)
+      .limit(itemsPerPage)
+      .populate("user", "fullName profilePicture")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "user",
+          select: "fullName profilePicture",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    const postsWithFlags = posts.map(postDoc => {
+      const postObj = postDoc.toObject() as IPost & { isLiked: boolean };
+
+      const likedByMe = postDoc.likes.some(uId => uId.toString() === req.user.id);
+
+      postObj.isLiked = likedByMe;
+      return postObj;
+    });
+
+    return res.status(200).json(postsWithFlags);
+  } catch (error) {
+    console.error("Error in getPosts:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
 };
 
 export const createPost = async (req: AuthenticatedRequest, res: Response) => {
@@ -40,7 +63,6 @@ export const editPost = async (req: AuthenticatedRequest, res: Response) => {
 
 export const createComment = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // יצירת אובייקט תגובה חדש
     const newComment = new CommentsModel({
       user: req.user.id,
       post: req.params.postId,
@@ -49,34 +71,30 @@ export const createComment = async (req: AuthenticatedRequest, res: Response) =>
 
     await newComment.save();
 
-    // הוספת התגובה לפוסט
     await PostModel.findByIdAndUpdate(req.params.postId, {
-      $push: { comments: newComment._id }
+      $push: { comments: newComment._id },
     }).exec();
 
-    // טעינת נתוני המשתמש של התגובה
     await newComment.populate("user", "fullName profilePicture");
 
-    // הבאת הפוסט כדי לבדוק אם צריך ליצור התראה
     const post = await PostModel.findById(req.params.postId).populate("user", "fullName profilePicture");
 
     if (post && post.user && (post.user as any)._id) {
       console.log("✅ Creating COMMENT notification for post owner:", (post.user as any)._id.toString());
     }
 
-    // אם המגיב הוא לא בעל הפוסט – צור התראה
     if (post && post.user && (post.user as any)._id.toString() !== req.user.id) {
       const user = await User.findById(req.user.id);
 
       const payload = {
-        userId: (post.user as any)._id.toString(), // בעל הפוסט
+        userId: (post.user as any)._id.toString(),
         fromUser: {
           id: req.user.id,
           fullName: user?.fullName || "Unknown",
           profilePicture: user?.profilePicture || "",
         },
         type: "comment",
-        postId: (post._id as mongoose.Types.ObjectId).toString(), // הבדל חשוב: post.id עלול להיות undefined
+        postId: (post._id as mongoose.Types.ObjectId).toString(),
         createdAt: new Date(),
         read: false,
       };
@@ -101,11 +119,9 @@ export const createComment = async (req: AuthenticatedRequest, res: Response) =>
   }
 };
 
-
 export const getUserPosts = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { userId } = req.params;
-
     console.log(`Fetching posts for userId: ${userId}`);
 
     const posts = await PostModel.find({ user: userId })
@@ -117,12 +133,20 @@ export const getUserPosts = async (req: AuthenticatedRequest, res: Response) => 
           select: "fullName profilePicture",
         },
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .exec();
 
-    res.status(200).json(posts);
+    const postsWithFlags = posts.map(postDoc => {
+      const postObj = postDoc.toObject() as IPost & { isLiked: boolean };
+      const likedByMe = postDoc.likes.some(uId => uId.toString() === req.user.id);
+      postObj.isLiked = likedByMe;
+      return postObj;
+    });
+
+    return res.status(200).json(postsWithFlags);
   } catch (error) {
     console.error("Error fetching user posts:", error);
-    res.status(500).json({ message: "Failed to fetch user posts" });
+    return res.status(500).json({ message: "Failed to fetch user posts" });
   }
 };
 
@@ -131,42 +155,37 @@ export const likePost = async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user.id;
     const postId = req.params.postId;
 
-    const post = await PostModel.findById(postId).populate("user");
-
-    if (!post) {
+    const postDoc = await PostModel.findById(postId).populate("user");
+    if (!postDoc) {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    const alreadyLiked = post.likes.some((id) => id.toString() === userId);
+    const alreadyLiked = postDoc.likes.some(id => id.toString() === userId);
     if (alreadyLiked) {
       await PostModel.findByIdAndUpdate(postId, {
         $pull: { likes: userId },
-      });
+      }).exec();
       console.log(`👎 User ${userId} removed like from post ${postId}`);
     } else {
       await PostModel.findByIdAndUpdate(postId, {
         $addToSet: { likes: userId },
-      });
+      }).exec();
       console.log(`👍 User ${userId} liked post ${postId}`);
 
-      // ✅ יצירת התראה רק אם זה לא הלייק של בעל הפוסט
-      if (post.user && post.user._id.toString() !== userId) {
+      if (postDoc.user && postDoc.user._id.toString() !== userId) {
         const user = await User.findById(userId);
         const payload = {
-          userId: post.user._id.toString(),
+          userId: (postDoc.user as any)._id.toString(),
           fromUser: {
             id: userId,
             fullName: user?.fullName || "Unknown",
             profilePicture: user?.profilePicture || "",
           },
           type: "like",
-          postId: (post._id as mongoose.Types.ObjectId | string).toString(),
+          postId: (postDoc._id as mongoose.Types.ObjectId).toString(),
           createdAt: new Date(),
           read: false,
         };
-
-        console.log("📦 Notification Payload (like):", payload);
-
         try {
           await NotificationModel.create(payload);
           console.log("✅ Notification created successfully (like)");
@@ -178,12 +197,28 @@ export const likePost = async (req: AuthenticatedRequest, res: Response) => {
       }
     }
 
-    const updatedPost = await PostModel.findById(postId).populate("user", "fullName profilePicture");
-    res.status(200).json(updatedPost);
+    const updatedPostDoc = await PostModel.findById(postId)
+      .populate("user", "fullName profilePicture")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "user",
+          select: "fullName profilePicture",
+        },
+      })
+      .exec();
 
+    if (!updatedPostDoc) {
+      return res.status(404).json({ message: "Post not found after update" });
+    }
+
+    const updatedPostObj = updatedPostDoc.toObject() as IPost & { isLiked: boolean };
+    updatedPostObj.isLiked = updatedPostDoc.likes.some(id => id.toString() === userId);
+
+    return res.status(200).json(updatedPostObj);
   } catch (error) {
     console.error("❌ Error liking/unliking post:", error);
-    res.status(500).json({ message: "Failed to like/unlike post" });
+    return res.status(500).json({ message: "Failed to like/unlike post" });
   }
 };
 
@@ -240,7 +275,7 @@ export const getPost = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const postId = req.params.postId;
 
-    const post = await PostModel.findById(postId)
+    const postDoc = await PostModel.findById(postId)
       .populate("user", "fullName profilePicture")
       .populate({
         path: "comments",
@@ -248,16 +283,20 @@ export const getPost = async (req: AuthenticatedRequest, res: Response) => {
           path: "user",
           select: "fullName profilePicture",
         },
-      });
+      })
+      .exec();
 
-    if (!post) {
+    if (!postDoc) {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    res.status(200).json(post);
+    const postObj = postDoc.toObject() as IPost & { isLiked: boolean };
+    const likedByMe = postDoc.likes.some(uId => uId.toString() === req.user.id);
+    postObj.isLiked = likedByMe;
+
+    return res.status(200).json(postObj);
   } catch (error) {
     console.error("Error fetching post:", error);
-    res.status(500).json({ message: "Failed to fetch post" });
+    return res.status(500).json({ message: "Failed to fetch post" });
   }
 };
-

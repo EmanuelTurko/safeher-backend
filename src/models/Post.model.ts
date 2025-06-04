@@ -1,6 +1,4 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { IComment } from "./Comments.model";
-import { IUser } from "./User.model";
 
 export interface IPost extends Document {
   user: mongoose.Types.ObjectId;
@@ -9,6 +7,9 @@ export interface IPost extends Document {
   comments: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
+  likeCount?: number;
+  commentCount?: number;
+  isLiked?: boolean;
 }
 
 const PostSchema: Schema = new Schema<IPost>(
@@ -33,12 +34,22 @@ const PostSchema: Schema = new Schema<IPost>(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
+PostSchema.virtual("likeCount").get(function (this: IPost) {
+  return this.likes ? this.likes.length : 0;
+});
+
+PostSchema.virtual("commentCount").get(function (this: IPost) {
+  return this.comments ? this.comments.length : 0;
+});
+
+PostSchema.virtual("isLiked").get(function (this: IPost) {
+  return false;
+});
+
 const Post = mongoose.model<IPost>("Post", PostSchema);
 export default Post;
-
-// Post.deleteMany({}).then(() => {
-//   console.log("Posts deleted");
-// });
