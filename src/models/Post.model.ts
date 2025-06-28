@@ -10,6 +10,7 @@ export interface IPost extends Document {
   likeCount?: number;
   commentCount?: number;
   isLiked?: boolean;
+  isAnonymous?: boolean;
 }
 
 const PostSchema: Schema = new Schema<IPost>(
@@ -30,6 +31,10 @@ const PostSchema: Schema = new Schema<IPost>(
     comments: {
       type: [{ type: mongoose.Types.ObjectId, ref: "Comment" }],
       default: [],
+    },
+    isAnonymous: {
+      type: Boolean,
+      default: false,
     },
   },
   {

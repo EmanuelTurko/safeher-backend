@@ -31,8 +31,12 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response) => {
       const postObj = postDoc.toObject() as IPost & { isLiked: boolean };
 
       const likedByMe = postDoc.likes.some(uId => uId.toString() === req.user.id);
-
       postObj.isLiked = likedByMe;
+      postObj.isLiked = likedByMe;
+      if (postObj.isAnonymous && postObj.user && typeof postObj.user === "object" && "fullName" in postObj.user) {
+        (postObj.user as any).fullName = "Anonymous";
+        (postObj.user as any).profilePicture = "";
+      }
       return postObj;
     });
 
@@ -48,6 +52,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
   const newPost = new PostModel({
     user: req.user.id,
     body: req.body.body,
+    isAnonymous: req.body.isAnonymous || false,
   });
   await newPost.save();
 
@@ -136,19 +141,12 @@ export const getUserPosts = async (req: AuthenticatedRequest, res: Response) => 
       .sort({ createdAt: -1 })
       .exec();
 
-    const postsWithFlags = posts.map(postDoc => {
-      const postObj = postDoc.toObject() as IPost & { isLiked: boolean };
-      const likedByMe = postDoc.likes.some(uId => uId.toString() === req.user.id);
-      postObj.isLiked = likedByMe;
-      return postObj;
-    });
-
-    return res.status(200).json(postsWithFlags);
+  return res.status(200).json(posts);
   } catch (error) {
     console.error("Error fetching user posts:", error);
     return res.status(500).json({ message: "Failed to fetch user posts" });
   }
-};
+}
 
 export const likePost = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -299,4 +297,4 @@ export const getPost = async (req: AuthenticatedRequest, res: Response) => {
     console.error("Error fetching post:", error);
     return res.status(500).json({ message: "Failed to fetch post" });
   }
-};
+}
