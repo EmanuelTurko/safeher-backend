@@ -3,7 +3,7 @@ import User from "../models/User.model";
 import fs from "fs";
 import path from "path";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
-import {sendSafeCircleTemplateMessage} from "../twilio/twilioTemplateMessage";
+import { sendSafeCircleTemplateMessage } from "../twilio/twilioTemplateMessage";
 // import {sendWhatsAppMessage} from "../services/whatsapp";
 
 // Update Safe Circle
@@ -13,14 +13,7 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
   try {
     const { safeCircle } = req.body;
 
-    if (
-      !Array.isArray(safeCircle) ||
-      !safeCircle.every(
-        (contact: any) =>
-          typeof contact.name === "string" &&
-          typeof contact.phoneNumber === "string"
-      )
-    ) {
+    if (!Array.isArray(safeCircle) || !safeCircle.every((contact: any) => typeof contact.name === "string" && typeof contact.phoneNumber === "string")) {
       res.status(400).json({ message: "Invalid contacts format" });
       return;
     }
@@ -38,17 +31,13 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
     const newNumbers = new Set(safeCircle.map(c => normalizePhone(c.phoneNumber)));
 
     // סינון אנשי קשר קיימים שלא נמחקו
-    const preserved = existingContacts.filter(
-      c => newNumbers.has(normalizePhone(c.phoneNumber))
-    );
+    const preserved = existingContacts.filter(c => newNumbers.has(normalizePhone(c.phoneNumber)));
 
     // סינון אנשי קשר שהתווספו חדשים
-    const toAdd = safeCircle.filter(
-      c => !preserved.some(p => normalizePhone(p.phoneNumber) === normalizePhone(c.phoneNumber))
-    );
+    const toAdd = safeCircle.filter(c => !preserved.some(p => normalizePhone(p.phoneNumber) === normalizePhone(c.phoneNumber)));
 
-    for(const contact of toAdd){
-      try{
+    for (const contact of toAdd) {
+      try {
         await sendSafeCircleTemplateMessage(contact.phoneNumber, user.fullName);
         console.log(`Template message sent at ${contact.phoneNumber}`);
       } catch (error) {
@@ -92,7 +81,8 @@ export const getUserProfile = async (req: AuthenticatedRequest, res: Response): 
       profilePicture: user.profilePicture,
       birthDate: user.birthDate,
       idPhotoUrl: user.idPhotoUrl,
-      city: user.city, 
+      city: user.city,
+      isHelper: user.isHelper,
     });
   } catch (error) {
     console.error("Error fetching profile:", error);
@@ -104,7 +94,7 @@ export const getUserProfile = async (req: AuthenticatedRequest, res: Response): 
 export const updateUserProfile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
-    const { fullName, profilePicture, phoneNumber, email, city } = req.body;
+    const { fullName, profilePicture, phoneNumber, email, city, isHelper } = req.body;
 
     if (req.user.id !== userId) {
       res.status(403).json({ message: "Not authorized to update this profile" });
@@ -121,6 +111,7 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
     if (profilePicture) user.profilePicture = profilePicture;
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (email) user.email = email;
+    if (typeof isHelper === "boolean") user.isHelper = isHelper;
 
     // Check if email is unique
     if (email && email !== user.email) {
@@ -197,7 +188,7 @@ export const getUserPublicProfile = async (req: Request, res: Response): Promise
   try {
     const { userId } = req.params;
 
-    const user = await User.findById(userId).select("fullName profilePicture city ");
+    const user = await User.findById(userId).select("fullName profilePicture city isHelper");
 
     if (!user) {
       res.status(404).json({ message: "User not found" });
@@ -211,11 +202,48 @@ export const getUserPublicProfile = async (req: Request, res: Response): Promise
   }
 };
 
-// Get all users - new function
+// Update helper status
+export const updateHelperStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { isHelper } = req.body;
+
+    // Check if user is authorized to update this profile
+    if (req.user.id !== userId) {
+      res.status(403).json({ message: "Not authorized to update this profile" });
+      return;
+    }
+
+    // Validate input
+    if (typeof isHelper !== "boolean") {
+      res.status(400).json({ message: "isHelper must be a boolean value" });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    user.isHelper = isHelper;
+    await user.save();
+
+    res.status(200).json({
+      message: "Helper status updated successfully",
+      isHelper: user.isHelper,
+    });
+  } catch (error) {
+    console.error("Error updating helper status:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Get all users - updated to include isHelper
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     // Exclude password and select only necessary fields for display
-    const users = await User.find().select("fullName profilePicture phoneNumber birthDate _id city");
+    const users = await User.find().select("fullName profilePicture phoneNumber birthDate _id city isHelper");
 
     res.status(200).json(users);
   } catch (error) {
@@ -223,7 +251,6 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   const userId = req.params.userId;

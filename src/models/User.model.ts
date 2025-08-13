@@ -13,13 +13,14 @@ export interface IUser extends Document {
   safeCircleContacts: { name: string; phoneNumber: string }[];
   authProvider?: string;
   city?: string;
+  isHelper?: boolean;
   comparePassword(password: string): Promise<boolean>;
 }
 
 const ContactSchema = new Schema(
   {
     name: { type: String, required: true },
-    phoneNumber: { type: String, required: true }
+    phoneNumber: { type: String, required: true },
   },
   { _id: false }
 );
@@ -33,7 +34,7 @@ const UserSchema: Schema = new Schema<IUser>(
       required: function (this: any): boolean {
         return this.authProvider !== "google";
       },
-      select: false
+      select: false,
     },
     profilePicture: { type: String, default: "/avatar.webp" },
     birthDate: { type: String },
@@ -43,13 +44,14 @@ const UserSchema: Schema = new Schema<IUser>(
     accessToken: { type: String },
     safeCircleContacts: {
       type: [ContactSchema],
-      default: []
+      default: [],
     },
     authProvider: {
       type: String,
       enum: ["local", "google"],
-      default: "local"
-    }
+      default: "local",
+    },
+    isHelper: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

@@ -1,7 +1,7 @@
 import express from "express";
-import { getUserPublicProfile, updateUserProfile, uploadProfilePicture, getAllUsers } from "../controllers/user.controller";
+import { getUserPublicProfile, updateUserProfile, uploadProfilePicture, getAllUsers, updateHelperStatus } from "../controllers/user.controller";
 import { AuthenticatedRequest, authMiddleware } from "../middleware/auth.middleware";
-import { updateUserSafeCircle } from "../controllers/user.controller"; 
+import { updateUserSafeCircle } from "../controllers/user.controller";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -50,6 +50,9 @@ const upload = multer({
 // Get all users
 userRouter.get("/all", authMiddleware, getAllUsers);
 
+// Update helper status
+userRouter.put("/helper-status/:userId", authMiddleware, (req, res) => updateHelperStatus(req as AuthenticatedRequest, res));
+
 // Update user profile
 userRouter.put("/update-profile/:userId", authMiddleware, (req, res) => updateUserProfile(req as AuthenticatedRequest, res));
 
@@ -81,8 +84,6 @@ userRouter.get("/:userId", authMiddleware, (req, res) => {
   getUserPublicProfile(req, res);
 });
 
-userRouter.post("/updateUserSafeCircle", authMiddleware, (req, res) =>
-  updateUserSafeCircle(req as AuthenticatedRequest, res)
-);
+userRouter.post("/updateUserSafeCircle", authMiddleware, (req, res) => updateUserSafeCircle(req as AuthenticatedRequest, res));
 
 userRouter.delete("/delete/:userId", authMiddleware, deleteUser);

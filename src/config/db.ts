@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import User from "../models/User.model";
 dotenv.config();
 
 // Database connection
@@ -11,6 +12,10 @@ const connectDB = async () => {
         throw new Error("MONGO_URI is not defined in environment variables");
       }
       const conn = await mongoose.connect(mongoUri);
+
+      // Run migration to add isHelper field to existing documents
+      await migrateIsHelperField();
+
       resolve();
 
       console.log(`MongoDB Connected: ${conn.connection.host}`);
@@ -25,4 +30,18 @@ const connectDB = async () => {
     }
   });
 };
+
+// Migration function to add isHelper field to existing users
+const migrateIsHelperField = async () => {
+  try {
+    const result = await User.updateMany({ isHelper: { $exists: false } }, { $set: { isHelper: true } });
+
+    if (result.modifiedCount > 0) {
+      console.log(`Migration: Added isHelper field to ${result.modifiedCount} users`);
+    }
+  } catch (error) {
+    console.error("Migration error:", error);
+  }
+};
+
 export default connectDB;
