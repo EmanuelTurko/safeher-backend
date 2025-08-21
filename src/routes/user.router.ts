@@ -1,5 +1,5 @@
 import express from "express";
-import { getUserPublicProfile, updateUserProfile, uploadProfilePicture, getAllUsers, updateHelperStatus } from "../controllers/user.controller";
+import { getUserPublicProfile, updateUserProfile, uploadProfilePicture, getAllUsers, updateHelperStatus, updateFcmToken } from "../controllers/user.controller";
 import { AuthenticatedRequest, authMiddleware } from "../middleware/auth.middleware";
 import { updateUserSafeCircle } from "../controllers/user.controller";
 import multer from "multer";
@@ -77,6 +77,9 @@ userRouter.post(
   },
   (req, res) => uploadProfilePicture(req as AuthenticatedRequest, res)
 );
+
+// Update FCM token
+userRouter.post("/fcm-token/:userId", authMiddleware, (req, res) => updateFcmToken(req as AuthenticatedRequest, res));
 
 // Get public user profile
 userRouter.get("/:userId", authMiddleware, (req, res) => {

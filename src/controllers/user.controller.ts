@@ -262,3 +262,54 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({ message: "Failed to delete user" });
   }
 };
+
+// Update FCM token
+export const updateFcmToken = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const { fcmToken } = req.body;
+
+    console.log("=== FCM TOKEN UPDATE DEBUG ===");
+    console.log("User ID:", userId);
+    console.log("FCM Token received:", fcmToken ? fcmToken.substring(0, 20) + "..." : "NULL/EMPTY");
+    console.log("Token length:", fcmToken ? fcmToken.length : 0);
+
+    // Check if user is authorized to update this profile
+    if (req.user.id !== userId) {
+      console.log("❌ Not authorized to update this profile");
+      res.status(403).json({ message: "Not authorized to update this profile" });
+      return;
+    }
+
+    // Validate input
+    if (!fcmToken || typeof fcmToken !== "string") {
+      console.log("❌ Invalid FCM token format");
+      res.status(400).json({ message: "FCM token is required and must be a string" });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("❌ User not found:", userId);
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    console.log("✅ User found:", user.fullName);
+    console.log("Previous FCM token:", user.fcmToken ? user.fcmToken.substring(0, 20) + "..." : "None");
+
+    user.fcmToken = fcmToken;
+    await user.save();
+
+    console.log("✅ FCM token updated successfully");
+    console.log("New FCM token saved:", user.fcmToken.substring(0, 20) + "...");
+
+    res.status(200).json({
+      message: "FCM token updated successfully",
+      fcmToken: user.fcmToken,
+    });
+  } catch (error) {
+    console.error("❌ Error updating FCM token:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

@@ -1,0 +1,63 @@
+### Test Chat and Push Notifications
+
+### 1. Update FCM Token
+POST http://localhost:3001/api/user/fcm-token/USER_ID_HERE
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "fcmToken": "YOUR_FCM_TOKEN_HERE"
+}
+
+### 2. Send Message
+POST http://localhost:3001/api/messages
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "receiverId": "RECEIVER_ID_HERE",
+  "content": "Hello! This is a test message."
+}
+
+### 3. Get Conversation
+GET http://localhost:3001/api/messages/conversation/USER_ID_1/USER_ID_2
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 4. Mark Message as Read
+PUT http://localhost:3001/api/messages/MESSAGE_ID_HERE/read
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 5. Mark All Messages as Read
+PUT http://localhost:3001/api/messages/read-all/SENDER_ID_HERE
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 6. Get Unread Message Count
+GET http://localhost:3001/api/messages/unread-count
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 7. Get Recent Conversations
+GET http://localhost:3001/api/messages/conversations
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 8. Create Helper Request (with notifications)
+POST http://localhost:3001/api/helper/request
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requesterId": "REQUESTER_ID_HERE",
+  "requesterName": "Test User",
+  "helperIds": ["HELPER_ID_1", "HELPER_ID_2"]
+}
+
+### 9. Respond to Helper Request (with notifications)
+POST http://localhost:3001/api/helper/respond
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "helperId": "HELPER_ID_HERE",
+  "requesterId": "REQUESTER_ID_HERE",
+  "requestId": "REQUEST_ID_HERE",
+  "accepted": true
+}

@@ -14,6 +14,7 @@ export interface IUser extends Document {
   authProvider?: string;
   city?: string;
   isHelper?: boolean;
+  fcmToken?: string;
   comparePassword(password: string): Promise<boolean>;
 }
 
@@ -52,6 +53,7 @@ const UserSchema: Schema = new Schema<IUser>(
       default: "local",
     },
     isHelper: { type: Boolean, default: true },
+    fcmToken: { type: String },
   },
   { timestamps: true }
 );

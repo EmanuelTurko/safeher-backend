@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WebSocket Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>WebSocket Test</h1>
+    <div>
+      <label>User ID: </label>
+      <input type="text" id="userId" placeholder="Enter user ID" />
+      <button onclick="connect()">Connect</button>
+      <button onclick="disconnect()">Disconnect</button>
+    </div>
+    <div>
+      <h3>Send Helper Request</h3>
+      <input type="text" id="requesterId" placeholder="Requester ID" />
+      <input type="text" id="requesterName" placeholder="Requester Name" />
+      <input type="text" id="helperIds" placeholder="Helper IDs (comma separated)" />
+      <button onclick="sendHelperRequest()">Send Helper Request</button>
+    </div>
+    <div>
+      <h3>Send Chat Message</h3>
+      <input type="text" id="receiverId" placeholder="Receiver ID" />
+      <input type="text" id="messageContent" placeholder="Message" />
+      <button onclick="sendChatMessage()">Send Message</button>
+    </div>
+    <div>
+      <h3>Logs</h3>
+      <div id="logs" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll"></div>
+    </div>
+
+    <script>
+      let socket = null;
+
+      function log(message) {
+        const logs = document.getElementById("logs");
+        logs.innerHTML += new Date().toLocaleTimeString() + ": " + message + "<br>";
+        logs.scrollTop = logs.scrollHeight;
+      }
+
+      function connect() {
+        const userId = document.getElementById("userId").value;
+        if (!userId) {
+          alert("Please enter a user ID");
+          return;
+        }
+
+        socket = io("http://localhost:3001", {
+          query: { userId: userId },
+        });
+
+        socket.on("connect", () => {
+          log("Connected to WebSocket server");
+        });
+
+        socket.on("disconnect", () => {
+          log("Disconnected from WebSocket server");
+        });
+
+        socket.on("helper_request_received", data => {
+          log("Received helper request: " + JSON.stringify(data));
+        });
+
+        socket.on("helper_response_received", data => {
+          log("Received helper response: " + JSON.stringify(data));
+        });
+
+        socket.on("message_received", data => {
+          log("Received chat message: " + JSON.stringify(data));
+        });
+      }
+
+      function disconnect() {
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+          log("Disconnected");
+        }
+      }
+
+      function sendHelperRequest() {
+        if (!socket) {
+          alert("Please connect first");
+          return;
+        }
+
+        const requesterId = document.getElementById("requesterId").value;
+        const requesterName = document.getElementById("requesterName").value;
+        const helperIds = document
+          .getElementById("helperIds")
+          .value.split(",")
+          .map(id => id.trim());
+
+        const data = {
+          requesterId: requesterId,
+          requesterName: requesterName,
+          helperIds: helperIds,
+        };
+
+        socket.emit("helper_request", data);
+        log("Sent helper request: " + JSON.stringify(data));
+      }
+
+      function sendChatMessage() {
+        if (!socket) {
+          alert("Please connect first");
+          return;
+        }
+
+        const receiverId = document.getElementById("receiverId").value;
+        const content = document.getElementById("messageContent").value;
+
+        const data = {
+          receiverId: receiverId,
+          content: content,
+        };
+
+        socket.emit("chat_message", data);
+        log("Sent chat message: " + JSON.stringify(data));
+      }
+    </script>
+  </body>
+</html>

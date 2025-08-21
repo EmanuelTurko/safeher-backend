@@ -1,0 +1,50 @@
+### Test Helper System (Updated)
+
+### 1. Check Firebase Status (Debug)
+GET http://localhost:3001/api/helper/firebase-status
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 2. Create helper request
+POST http://localhost:3001/api/helper/request
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requesterId": "USER_ID_HERE",
+  "requesterName": "Test User",
+  "helperIds": ["HELPER_ID_1", "HELPER_ID_2"]
+}
+
+### 3. Respond to helper request
+POST http://localhost:3001/api/helper/respond
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requestId": "REQUEST_ID_HERE",
+  "helperId": "HELPER_ID_HERE",
+  "response": "accepted"
+}
+
+### 4. Respond to helper request (decline)
+POST http://localhost:3001/api/helper/respond
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requestId": "REQUEST_ID_HERE",
+  "helperId": "HELPER_ID_HERE",
+  "response": "declined"
+}
+
+### 5. Get my helper requests (as helper)
+GET http://localhost:3001/api/helper/my-requests
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 6. Get my requests as requester
+GET http://localhost:3001/api/helper/my-requests-as-requester
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 7. Get all users (to see helper status)
+GET http://localhost:3001/api/user/all
+Authorization: Bearer YOUR_TOKEN_HERE
