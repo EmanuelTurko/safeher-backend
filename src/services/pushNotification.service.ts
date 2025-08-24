@@ -69,10 +69,17 @@ export class PushNotificationService {
     } catch (error) {
       console.error(`❌ Error sending push notification to user ${userId}:`, error);
 
-      // Log specific Firebase errors
+      // Log specific Firebase errors and handle invalid tokens
       if (error && typeof error === "object" && "code" in error) {
-        console.error("Firebase error code:", (error as any).code);
-        console.error("Firebase error message:", (error as any).message);
+        const code = (error as any).code as string;
+        const message = (error as any).message as string;
+        console.error("Firebase error code:", code);
+        console.error("Firebase error message:", message);
+
+        if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
+          console.warn(`Removing invalid FCM token for user ${userId}`);
+          await User.updateOne({ _id: userId }, { $unset: { fcmToken: "" } });
+        }
       }
 
       return false;
@@ -120,6 +127,23 @@ export class PushNotificationService {
 
       const response = await messaging.sendEachForMulticast(message);
       console.log(`Push notifications sent to ${response.successCount}/${tokens.length} users`);
+
+      // Per-token diagnostics and cleanup of invalid tokens
+      for (let i = 0; i < response.responses.length; i++) {
+        const r = response.responses[i];
+        const u = users[i];
+        if (!r.success) {
+          const code = (r.error as any)?.code as string | undefined;
+          const msg = (r.error as any)?.message as string | undefined;
+          console.error(`❌ Failed to send to user ${u?._id} (${u?.fullName || "unknown"}):`, code, msg);
+          if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
+            console.warn(`Removing invalid FCM token for user ${u?._id}`);
+            if (u?._id) {
+              await User.updateOne({ _id: u._id }, { $unset: { fcmToken: "" } });
+            }
+          }
+        }
+      }
       return response.successCount;
     } catch (error) {
       console.error("Error sending push notifications to multiple users:", error);
@@ -175,6 +199,44 @@ export class PushNotificationService {
     };
 
     return await this.sendToUser(receiverId, notification);
+  }
+
+  /**
+   * Send call disconnected notification
+   */
+  static async sendCallDisconnectedNotification(userId: string, callId: string, endedByUserName: string, duration: number): Promise<boolean> {
+    const notification: PushNotificationData = {
+      title: "השיחה הסתיימה",
+      body: `השיחה נותקה על ידי ${endedByUserName} (משך: ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, "0")})`,
+      data: {
+        type: "call_disconnected",
+        callId,
+        endedBy: endedByUserName,
+        duration: duration.toString(),
+      },
+    };
+
+    return await this.sendToUser(userId, notification);
+  }
+
+  /**
+   * Send call started notification (optional)
+   */
+  static async sendCallStartedNotification(userId: string, callId: string, requesterId: string, helperId: string, requesterName?: string, helperName?: string): Promise<boolean> {
+    const notification: PushNotificationData = {
+      title: "שיחה התחילה",
+      body: "השיחה התחילה, הטיימר רץ בצד הלקוח",
+      data: {
+        type: "call_started",
+        callId,
+        requesterId,
+        helperId,
+        ...(requesterName ? { requesterName } : {}),
+        ...(helperName ? { helperName } : {}),
+      },
+    };
+
+    return await this.sendToUser(userId, notification);
   }
 
   /**

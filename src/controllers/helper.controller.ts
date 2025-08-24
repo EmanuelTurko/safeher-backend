@@ -304,11 +304,11 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
       success: true,
       message: "Response recorded successfully",
       data: {
-        requestId: helperRequest._id,
+        requestId: (helperRequest._id as any).toString(),
         status: helperRequest.status,
         accepted: response === "accepted",
-        acceptedBy: helperRequest.acceptedBy,
-        requesterId: helperRequest.requesterId,
+        acceptedBy: helperRequest.acceptedBy ? (helperRequest.acceptedBy as any).toString() : null,
+        requesterId: (helperRequest.requesterId as any).toString(),
         requesterName: helperRequest.requesterName,
         helperId: helperId,
         response: response,
@@ -340,9 +340,24 @@ export const getMyHelperRequests = async (req: AuthenticatedRequest, res: Respon
       expiresAt: { $gt: new Date() },
     }).populate("requesterId", "fullName");
 
+    // Convert ObjectIds to strings for client compatibility
+    const requestsForClient = requests.map(request => ({
+      ...request.toObject(),
+      _id: (request._id as any).toString(),
+      requesterId: (request.requesterId as any).toString(),
+      helperIds: (request.helperIds as any[]).map(id => id.toString()),
+      acceptedBy: request.acceptedBy ? (request.acceptedBy as any).toString() : null,
+      responses: request.responses
+        ? request.responses.map(response => ({
+            ...response,
+            helperId: (response.helperId as any).toString(),
+          }))
+        : [],
+    }));
+
     res.json({
       success: true,
-      data: requests,
+      data: requestsForClient,
     });
   } catch (error) {
     console.error("Error getting helper requests:", error);
@@ -365,7 +380,7 @@ export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: R
     const requests = await HelperRequest.find({
       requesterId,
       status: { $in: ["pending", "accepted"] },
-    }).populate("acceptedBy", "fullName");
+    });
 
     console.log("Found requests:", requests.length);
 
@@ -393,9 +408,24 @@ export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: R
       });
     });
 
+    // Convert ObjectIds to strings for client compatibility
+    const requestsForClient = requests.map(request => ({
+      ...request.toObject(),
+      _id: (request._id as any).toString(),
+      requesterId: (request.requesterId as any).toString(),
+      helperIds: (request.helperIds as any[]).map(id => id.toString()),
+      acceptedBy: request.acceptedBy ? (request.acceptedBy as any).toString() : null,
+      responses: request.responses
+        ? request.responses.map(response => ({
+            ...response,
+            helperId: (response.helperId as any).toString(),
+          }))
+        : [],
+    }));
+
     res.json({
       success: true,
-      data: requests,
+      data: requestsForClient,
       message: "Requests retrieved successfully",
       count: requests.length,
       acceptedCount: acceptedRequests.length,
@@ -459,12 +489,12 @@ export const debugHelperRequests = async (req: AuthenticatedRequest, res: Respon
     console.log("Total requests in DB:", allRequests.length);
 
     const debugData = allRequests.map(request => ({
-      id: request._id,
+      id: (request._id as any).toString(),
       status: request.status,
-      requesterId: request.requesterId,
+      requesterId: (request.requesterId as any).toString(),
       requesterName: request.requesterName,
-      helperIds: request.helperIds,
-      acceptedBy: request.acceptedBy,
+      helperIds: (request.helperIds as any[]).map(id => id.toString()),
+      acceptedBy: request.acceptedBy ? (request.acceptedBy as any).toString() : null,
       createdAt: request.createdAt,
       expiresAt: request.expiresAt,
     }));
