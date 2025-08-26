@@ -4,7 +4,7 @@ import User from "../models/User.model";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { PushNotificationService } from "../services/pushNotification.service";
 
-// יצירת שיחה חדשה
+// Create a new call
 export const createCall = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { requesterId, helperId, callId, requestId } = req.body;
@@ -15,14 +15,14 @@ export const createCall = async (req: AuthenticatedRequest, res: Response): Prom
     console.log("Request body:", req.body);
     console.log("Current user ID:", currentUserId);
 
-    // וידוא שהמשתמש הנוכחי הוא מבקש העזרה או המתנדבת
+    // Ensure the current user is either the requester or the helper
     if (currentUserId !== requesterId && currentUserId !== helperId) {
       console.log("❌ Unauthorized: User not part of the call");
       res.status(403).json({ message: "forbidden", data: null, error: "forbidden" });
       return;
     }
 
-    // בדיקה שהמשתמשים קיימים
+    // Verify users exist
     const [requester, helper] = await Promise.all([User.findById(requesterId), User.findById(helperId)]);
 
     if (!requester || !helper) {
@@ -31,7 +31,7 @@ export const createCall = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    // first-accept wins: אם כבר קיימת שיחה לבקשה הזו
+    // first-accept wins: if a call already exists for this request
     if (requestId) {
       const existingForRequest = await Call.findOne({ requestId, status: "active" });
       if (existingForRequest) {
@@ -41,7 +41,7 @@ export const createCall = async (req: AuthenticatedRequest, res: Response): Prom
       }
     }
 
-    // Idempotency: אם יש מפתח אידמפוטנציה, להחזיר את אותה תוצאה
+    // Idempotency: if an idempotency key exists, return the same result
     if (idempotencyKey) {
       const existingByKey = await Call.findOne({ idempotencyKey });
       if (existingByKey) {
@@ -54,7 +54,7 @@ export const createCall = async (req: AuthenticatedRequest, res: Response): Prom
       }
     }
 
-    // בדיקה אם יש כבר שיחה פעילה בין שני המשתמשים (בטיחות)
+    // Safety: check if there is already an active call between the two users
     const existingCall = await Call.findOne({
       $or: [
         { requesterId, helperId, status: "active" },
@@ -68,7 +68,7 @@ export const createCall = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    // יצירת השיחה
+    // Create the call
     const call = new Call({
       requesterId,
       helperId,
@@ -82,10 +82,10 @@ export const createCall = async (req: AuthenticatedRequest, res: Response): Prom
     await call.save();
     console.log("✅ Call created successfully:", call._id);
 
-    // שליחת התראות התחלת שיחה לשני הצדדים (ללא תלות בפולינג)
+    // Send call-started notifications to both parties (regardless of polling)
     try {
-      const requesterName = (requester as any).fullName || "מבקשת";
-      const helperName = (helper as any).fullName || "מתנדבת";
+      const requesterName = (requester as any).fullName || "Requester";
+      const helperName = (helper as any).fullName || "Helper";
       await Promise.all([PushNotificationService.sendCallStartedNotification((requesterId as any).toString(), (call._id as any).toString(), (requesterId as any).toString(), (helperId as any).toString(), requesterName, helperName), PushNotificationService.sendCallStartedNotification((helperId as any).toString(), (call._id as any).toString(), (requesterId as any).toString(), (helperId as any).toString(), requesterName, helperName)]);
     } catch (e) {
       console.warn("⚠️ Failed to send call started notifications", e);
@@ -98,7 +98,7 @@ export const createCall = async (req: AuthenticatedRequest, res: Response): Prom
   }
 };
 
-// ניתוק שיחה
+// Disconnect a call
 export const disconnectCall = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { callId } = req.params;
@@ -108,41 +108,41 @@ export const disconnectCall = async (req: AuthenticatedRequest, res: Response): 
     console.log("Call ID:", callId);
     console.log("Current user ID:", currentUserId);
 
-    // מציאת השיחה
+    // Find the call
     const call = await Call.findById(callId);
     if (!call) {
       console.log("❌ Call not found:", callId);
       res.status(404).json({
         success: false,
-        message: "שיחה לא נמצאה",
+        message: "Call not found",
       });
       return;
     }
 
-    // וידוא שהמשתמש הנוכחי הוא חלק מהשיחה
+    // Ensure the current user is a participant in the call
     if (call.requesterId.toString() !== currentUserId && call.helperId.toString() !== currentUserId) {
       console.log("❌ Unauthorized: User not part of the call");
       res.status(403).json({
         success: false,
-        message: "לא מורשה לנתק שיחה זו",
+        message: "Not authorized to disconnect this call",
       });
       return;
     }
 
-    // בדיקה שהשיחה עדיין פעילה
+    // Verify the call is still active
     if (call.status !== "active") {
       console.log("❌ Call is not active:", call.status);
       res.status(400).json({
         success: false,
-        message: "השיחה כבר לא פעילה",
+        message: "The call is no longer active",
       });
       return;
     }
 
-    // חישוב משך השיחה
+    // Calculate call duration
     const duration = Math.floor((Date.now() - call.startedAt.getTime()) / 1000);
 
-    // עדכון השיחה
+    // Update the call
     call.status = "disconnected";
     call.endedAt = new Date();
     call.endedBy = currentUserId as any;
@@ -151,24 +151,24 @@ export const disconnectCall = async (req: AuthenticatedRequest, res: Response): 
     await call.save();
     console.log("✅ Call disconnected successfully");
 
-    // שליחת התראות לשתי הצדדים
+    // Send notifications to both parties
     const notificationPromises = [];
 
-    // קבלת שם המשתמש שניתק
+    // Resolve the name of the user who disconnected
     const currentUser = await User.findById(currentUserId);
-    const currentUserName = currentUser?.fullName || "משתמש";
+    const currentUserName = currentUser?.fullName || "User";
 
-    // התראה למבקש העזרה
+    // Notify the requester
     if (call.requesterId.toString() !== currentUserId) {
       notificationPromises.push(PushNotificationService.sendCallDisconnectedNotification(call.requesterId.toString(), (call._id as any).toString(), currentUserName, duration));
     }
 
-    // התראה למתנדבת
+    // Notify the helper
     if (call.helperId.toString() !== currentUserId) {
       notificationPromises.push(PushNotificationService.sendCallDisconnectedNotification(call.helperId.toString(), (call._id as any).toString(), currentUserName, duration));
     }
 
-    // שליחת ההתראות
+    // Send the notifications
     await Promise.all(notificationPromises);
     console.log("✅ Notifications sent to both parties");
 
@@ -189,7 +189,7 @@ export const disconnectCall = async (req: AuthenticatedRequest, res: Response): 
   }
 };
 
-// קבלת שיחות פעילות של משתמש
+// Get active calls for user
 export const getActiveCalls = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const currentUserId = req.user.id;
@@ -208,7 +208,7 @@ export const getActiveCalls = async (req: AuthenticatedRequest, res: Response): 
 
     console.log("Found active calls:", activeCalls.length);
 
-    // המרת ObjectIds למחרוזות
+    // Convert ObjectIds to strings for client compatibility
     const callsForClient = activeCalls.map(call => ({
       ...call.toObject(),
       _id: (call._id as any).toString(),
@@ -224,7 +224,7 @@ export const getActiveCalls = async (req: AuthenticatedRequest, res: Response): 
   }
 };
 
-// קבלת היסטוריית שיחות של משתמש
+// Get call history for user
 export const getCallHistory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const currentUserId = req.user.id;
@@ -247,7 +247,7 @@ export const getCallHistory = async (req: AuthenticatedRequest, res: Response): 
 
     console.log("Found calls:", calls.length);
 
-    // המרת ObjectIds למחרוזות
+    // Convert ObjectIds to strings for client compatibility
     const callsForClient = calls.map(call => ({
       ...call.toObject(),
       _id: (call._id as any).toString(),
@@ -263,7 +263,7 @@ export const getCallHistory = async (req: AuthenticatedRequest, res: Response): 
   }
 };
 
-// עדכון סטטוס שיחה (לשימוש חיצוני)
+// Update call status (for external usage)
 export const updateCallStatus = async (callId: string, status: "active" | "ended" | "disconnected", endedBy?: string): Promise<void> => {
   try {
     const call = await Call.findById(callId);

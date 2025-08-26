@@ -7,35 +7,35 @@ export interface FromUser {
 }
 
 export interface Notification extends Document {
-  userId: string; // למי שייכת ההתראה
-  fromUser: FromUser; // מי עשה את הפעולה
-  type: "like" | "comment"; // סוג הפעולה
-  postId: string; // על איזה פוסט ההתראה
+  userId: string; // Notification owner
+  fromUser: FromUser; // Actor who performed the action
+  type: "like" | "comment"; // Action type
+  postId: string; // Related post ID
   createdAt: Date;
   read: boolean;
 }
 
 const NotificationSchema = new Schema<Notification>({
-  userId: { type: String, required: true }, // בעל הפוסט
+  userId: { type: String, required: true }, // Post owner
   fromUser: {
     id: { type: String, required: true },
     fullName: { type: String, required: true },
-    profilePicture: { type: String }
+    profilePicture: { type: String },
   },
   type: {
     type: String,
     enum: ["like", "comment"],
-    required: true
+    required: true,
   },
   postId: { type: String, required: true },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   read: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
 export default mongoose.model<Notification>("Notification", NotificationSchema);

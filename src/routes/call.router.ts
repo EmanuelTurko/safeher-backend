@@ -5,16 +5,16 @@ import { createCall, disconnectCall, getActiveCalls, getCallHistory } from "../c
 
 const callRouter = express.Router();
 
-// יצירת שיחה חדשה
+// Create a new call
 callRouter.post("/", authMiddleware, (req, res) => createCall(req as AuthenticatedRequest, res));
 
-// ניתוק שיחה
+// Disconnect a call
 callRouter.post("/:callId/disconnect", authMiddleware, (req, res) => disconnectCall(req as AuthenticatedRequest, res));
 
-// קבלת שיחות פעילות
+// Get active calls
 callRouter.get("/active", authMiddleware, (req, res) => getActiveCalls(req as AuthenticatedRequest, res));
 
-// קבלת היסטוריית שיחות
+// Get call history
 callRouter.get("/history", authMiddleware, (req, res) => getCallHistory(req as AuthenticatedRequest, res));
 
 export default callRouter;

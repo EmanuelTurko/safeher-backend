@@ -156,8 +156,8 @@ export class PushNotificationService {
    */
   static async sendHelperRequestNotifications(requesterName: string, requestId: string, helperIds: string[]): Promise<number> {
     const notification: PushNotificationData = {
-      title: "בקשת עזרה חדשה",
-      body: `${requesterName} מבקשת עזרה דחופה`,
+      title: "New help request",
+      body: `${requesterName} is requesting urgent assistance`,
       data: {
         type: "helper_request",
         requestId: requestId,
@@ -173,8 +173,8 @@ export class PushNotificationService {
    */
   static async sendHelperResponseNotification(requesterId: string, helperName: string, accepted: boolean): Promise<boolean> {
     const notification: PushNotificationData = {
-      title: "תגובה לבקשת עזרה",
-      body: accepted ? `${helperName} קיבלה את בקשת העזרה שלך` : `${helperName} לא יכולה לעזור כרגע`,
+      title: "Help request response",
+      body: accepted ? `${helperName} accepted your help request` : `${helperName} cannot help right now`,
       data: {
         type: "helper_response",
         accepted: accepted.toString(),
@@ -190,7 +190,7 @@ export class PushNotificationService {
    */
   static async sendMessageNotification(receiverId: string, senderName: string, messagePreview: string): Promise<boolean> {
     const notification: PushNotificationData = {
-      title: `הודעה חדשה מ-${senderName}`,
+      title: `New message from ${senderName}`,
       body: messagePreview.length > 50 ? messagePreview.substring(0, 50) + "..." : messagePreview,
       data: {
         type: "new_message",
@@ -206,8 +206,8 @@ export class PushNotificationService {
    */
   static async sendCallDisconnectedNotification(userId: string, callId: string, endedByUserName: string, duration: number): Promise<boolean> {
     const notification: PushNotificationData = {
-      title: "השיחה הסתיימה",
-      body: `השיחה נותקה על ידי ${endedByUserName} (משך: ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, "0")})`,
+      title: "Call ended",
+      body: `Call disconnected by ${endedByUserName} (duration: ${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, "0")})`,
       data: {
         type: "call_disconnected",
         callId,
@@ -224,8 +224,8 @@ export class PushNotificationService {
    */
   static async sendCallStartedNotification(userId: string, callId: string, requesterId: string, helperId: string, requesterName?: string, helperName?: string): Promise<boolean> {
     const notification: PushNotificationData = {
-      title: "שיחה התחילה",
-      body: "השיחה התחילה, הטיימר רץ בצד הלקוח",
+      title: "Call started",
+      body: "The call has started; the timer runs on the client",
       data: {
         type: "call_started",
         callId,

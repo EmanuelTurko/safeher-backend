@@ -27,13 +27,13 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
 
     const existingContacts = user.safeCircleContacts || [];
 
-    // ממפה את המספרים החדשים לצורך השוואה
+    // Map new phone numbers for comparison
     const newNumbers = new Set(safeCircle.map(c => normalizePhone(c.phoneNumber)));
 
-    // סינון אנשי קשר קיימים שלא נמחקו
+    // Filter existing contacts that were not removed
     const preserved = existingContacts.filter(c => newNumbers.has(normalizePhone(c.phoneNumber)));
 
-    // סינון אנשי קשר שהתווספו חדשים
+    // Filter newly added contacts
     const toAdd = safeCircle.filter(c => !preserved.some(p => normalizePhone(p.phoneNumber) === normalizePhone(c.phoneNumber)));
 
     for (const contact of toAdd) {
@@ -44,7 +44,7 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
         console.error(`Failed to send template message at ${contact.phoneNumber}:`, error);
       }
     }
-    // שילוב – מה שכבר היה ונשאר + מה שהתווסף
+    // Merge preserved contacts with newly added ones
     user.safeCircleContacts = [...preserved, ...toAdd];
 
     await user.save();
@@ -57,7 +57,7 @@ export const updateUserSafeCircle = async (req: Request, res: Response): Promise
   }
 };
 
-// פונקציה שמנרמלת מספר טלפון (מסירה רווחים וסוגריים, הופכת 0 ל־+972)
+// Normalize phone number (remove spaces/brackets, convert leading 0 to +972)
 const normalizePhone = (phone: string) => {
   return phone.replace(/[^0-9+]/g, "").replace(/^0/, "+972");
 };

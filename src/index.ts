@@ -57,7 +57,7 @@ export const appPromise = new Promise<[Express, Server<typeof IncomingMessage, t
     const isProd = process.env.NODE_ENV === "production";
     console.log(`Mode: ${process.env.NODE_ENV}`);
 
-    // ניקוי בקשות ישנות כל 10 דקות
+    // Cleanup expired requests every 10 minutes
     setInterval(async () => {
       await cleanupExpiredRequests();
     }, 10 * 60 * 1000);

@@ -5,7 +5,7 @@ import User from "../models/User.model";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { PushNotificationService } from "../services/pushNotification.service";
 
-// יצירת בקשה לעזרה
+// Create a helper request
 export const createHelperRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { requesterId, requesterName, helperIds } = req.body;
@@ -16,7 +16,7 @@ export const createHelperRequest = async (req: AuthenticatedRequest, res: Respon
     console.log("Requester Name:", requesterName);
     console.log("Helper IDs:", helperIds);
 
-    // בדיקה שהמשתמש קיים
+    // Verify requester exists
     const requester = await User.findById(requesterId);
     if (!requester) {
       console.log("❌ Requester not found:", requesterId);
@@ -28,29 +28,38 @@ export const createHelperRequest = async (req: AuthenticatedRequest, res: Respon
     }
     console.log("✅ Requester found:", requester.fullName);
 
-    // בדיקה שהמתנדבות קיימות וזמינות
+    // Verify helpers exist and have a valid FCM token
     const helpers = await User.find({
       _id: { $in: helperIds },
       isHelper: true,
-    });
+      fcmToken: { $exists: true, $ne: null },
+    })
+      .where("fcmToken")
+      .ne("")
+      .where("fcmToken")
+      .ne("null");
 
     console.log("Total helpers requested:", helperIds.length);
-    console.log("Helpers found with isHelper=true:", helpers.length);
+    console.log("Helpers found with isHelper=true and FCM token:", helpers.length);
     console.log(
       "Helper IDs found:",
       helpers.map(h => h._id)
     );
+    console.log(
+      "Helper FCM tokens:",
+      helpers.map(h => ({ id: h._id, fcmToken: h.fcmToken?.substring(0, 20) + "..." }))
+    );
 
     if (helpers.length === 0) {
-      console.log("❌ No available helpers found");
+      console.log("❌ No available helpers with FCM token found");
       res.status(404).json({
         success: false,
-        message: "No available helpers found",
+        message: "No available helpers with FCM token found",
       });
       return;
     }
 
-    // יצירת הבקשה
+    // Create the helper request
     const helperRequest = new HelperRequest({
       requesterId,
       requesterName,
@@ -69,17 +78,21 @@ export const createHelperRequest = async (req: AuthenticatedRequest, res: Respon
     console.log("✅ Created At:", helperRequest.createdAt);
     console.log("✅ Expires At:", helperRequest.expiresAt);
 
-    // שליחת push notifications למתנדבות
+    // Send push notifications to helpers
     console.log("=== SENDING PUSH NOTIFICATIONS ===");
     let notificationsSent = 0;
     let notificationsFailed = 0;
 
-    const notificationPromises = helperIds.map(async (helperId: string) => {
-      try {
-        const helper = await User.findById(helperId);
-        console.log(`Checking helper ${helperId}:`, helper ? "Found" : "Not found");
+    // Additional check - only helpers with a valid FCM token
+    const helpersWithFcmToken = helpers.filter(helper => helper.fcmToken && helper.fcmToken.trim() !== "" && helper.fcmToken !== "null");
+    console.log(`Found ${helpersWithFcmToken.length} helpers with valid FCM tokens out of ${helpers.length} total helpers`);
 
-        if (helper && helper.fcmToken) {
+    const notificationPromises = helpersWithFcmToken.map(async helper => {
+      const helperId = (helper._id as any).toString();
+      try {
+        console.log(`Processing helper ${helperId}:`, helper.fullName);
+
+        if (helper.fcmToken) {
           console.log(`Helper ${helperId} has FCM token:`, helper.fcmToken.substring(0, 20) + "...");
 
           const notificationData = {
@@ -117,15 +130,23 @@ export const createHelperRequest = async (req: AuthenticatedRequest, res: Respon
     await Promise.all(notificationPromises);
 
     console.log("=== PUSH NOTIFICATION SUMMARY ===");
+    console.log(`Total helpers requested: ${helperIds.length}`);
+    console.log(`Helpers with FCM token: ${helpersWithFcmToken.length}`);
     console.log(`Total notifications sent: ${notificationsSent}`);
     console.log(`Total notifications failed: ${notificationsFailed}`);
+    console.log(`Helpers count for response: ${notificationsSent}`);
 
     res.json({
       success: true,
       message: "Helper request created successfully",
-      data: helperRequest,
-      notificationsSent,
-      notificationsFailed,
+      data: {
+        requestId: (helperRequest._id as any).toString(),
+        helpersCount: notificationsSent,
+        notificationsSent,
+        notificationsFailed,
+        totalHelpersRequested: helperIds.length,
+        helpersWithFcmToken: helpersWithFcmToken.length,
+      },
     });
   } catch (error) {
     console.error("❌ Error creating helper request:", error);
@@ -137,13 +158,13 @@ export const createHelperRequest = async (req: AuthenticatedRequest, res: Respon
   }
 };
 
-// תגובה לבקשת עזרה
+// Respond to a helper request
 export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     console.log("=== HELPER RESPONSE DEBUG ===");
     console.log("Request body:", req.body);
 
-    // תמיכה בשני פורמטים
+    // Support both formats
     let requestId = req.body.requestId;
     let helperId = req.body.helperId;
     let response = req.body.response;
@@ -156,14 +177,17 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
     console.log("- response:", response);
     console.log("- requesterId:", requesterId);
     console.log("- accepted:", accepted);
+    console.log("- response type:", typeof response);
+    console.log("- response === 'accepted':", response === "accepted");
+    console.log("- response === 'accept':", response === "accept");
 
-    // אם יש accepted אבל אין response, המר
+    // If 'accepted' exists but 'response' missing - convert
     if (accepted !== undefined && response === undefined) {
       response = accepted ? "accepted" : "declined";
       console.log("Converted accepted to response:", response);
     }
 
-    // אם יש requesterId אבל אין requestId, נסה למצוא את הבקשה
+    // If 'requesterId' exists but 'requestId' missing - try to find the request
     if (!requestId && requesterId && helperId) {
       console.log("Looking for request by requesterId and helperId...");
       const helperRequest = await HelperRequest.findOne({
@@ -207,7 +231,7 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
 
     console.log("Looking for helper request with ID:", requestId);
 
-    // בדיקה שהבקשה קיימת
+    // Verify request exists
     const helperRequest = await HelperRequest.findById(requestId);
     if (!helperRequest) {
       console.log("❌ Helper request not found:", requestId);
@@ -225,7 +249,7 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
     console.log("Helper IDs in request:", helperRequest.helperIds);
     console.log("Current acceptedBy:", helperRequest.acceptedBy);
 
-    // בדיקה שהמתנדבת נמצאת ברשימת המתנדבות
+    // Ensure the helper is part of the request's helperIds
     if (!helperRequest.helperIds.includes(helperId)) {
       console.log("❌ Helper not in request list:", helperId);
       res.status(403).json({
@@ -235,7 +259,7 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
       return;
     }
 
-    // בדיקה שהבקשה עדיין פעילה
+    // Ensure the request is still pending
     if (helperRequest.status !== "pending") {
       console.log("❌ Request is no longer active:", helperRequest.status);
       res.status(400).json({
@@ -247,7 +271,7 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
 
     console.log("✅ All validations passed, processing response...");
 
-    // יצירת התגובה
+    // Create the response document
     const helperResponse = new HelperResponse({
       helperId,
       requesterId: helperRequest.requesterId,
@@ -258,7 +282,7 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
     await helperResponse.save();
     console.log("✅ HelperResponse saved");
 
-    // הוסף את התגובה למערך responses
+    // Append the response into the request's responses array
     helperRequest.responses = helperRequest.responses || [];
     helperRequest.responses.push({
       helperId,
@@ -266,31 +290,44 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
       respondedAt: new Date(),
     });
 
-    if (response === "accepted") {
-      // עדכון סטטוס הבקשה
+    if (response === "accepted" || response === "accept") {
+      // Update the request status
       helperRequest.status = "accepted";
       helperRequest.acceptedBy = helperId;
       console.log("✅ Request accepted by helper:", helperId);
       console.log("✅ Updated acceptedBy field:", helperRequest.acceptedBy);
       console.log("✅ Status changed from 'pending' to 'accepted'");
+      console.log("✅ Response was:", response);
 
-      // NO FCM NOTIFICATION TO REQUESTER - they will get update via polling
+      // No FCM notification to requester - they will get update via polling
       console.log("ℹ️ No FCM notification sent to requester - they will get update via polling");
       console.log("ℹ️ Flow: Helper accepts → DB updated → Requester polls for status → UI updates");
     }
 
+    console.log("=== BEFORE SAVE ===");
+    console.log("Status before save:", helperRequest.status);
+    console.log("AcceptedBy before save:", helperRequest.acceptedBy);
+
     await helperRequest.save();
+
+    console.log("=== AFTER SAVE ===");
     console.log("✅ HelperRequest saved to database");
     console.log("✅ Final status:", helperRequest.status);
     console.log("✅ Final acceptedBy:", helperRequest.acceptedBy);
     console.log("✅ Final request ID:", helperRequest._id);
 
-    // NO FCM NOTIFICATION TO REQUESTER - they will get update via polling
+    // Extra verification - read from DB
+    const savedRequest = await HelperRequest.findById(requestId);
+    console.log("=== DATABASE VERIFICATION ===");
+    console.log("Status from DB:", savedRequest?.status);
+    console.log("AcceptedBy from DB:", savedRequest?.acceptedBy);
+
+    // No FCM notification to requester - they will get update via polling
     console.log("ℹ️ No FCM notification sent to requester - they will get update via polling");
 
     console.log("✅ Helper response processed successfully");
 
-    // סיכום הזרימה הנכונה
+    // Flow summary
     console.log("=== FLOW SUMMARY ===");
     console.log("1. Helper accepted request");
     console.log("2. Status updated to 'accepted' in DB");
@@ -299,24 +336,33 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
     console.log("5. Requester will get update via polling");
     console.log("6. This maintains the original flow correctly");
 
-    // הכנת התגובה עם כל המידע הנדרש
+    // Prepare the response payload with all required fields
     const responseData = {
       success: true,
       message: "Response recorded successfully",
       data: {
         requestId: (helperRequest._id as any).toString(),
         status: helperRequest.status,
-        accepted: response === "accepted",
+        accepted: response === "accepted" || response === "accept",
         acceptedBy: helperRequest.acceptedBy ? (helperRequest.acceptedBy as any).toString() : null,
         requesterId: (helperRequest.requesterId as any).toString(),
         requesterName: helperRequest.requesterName,
         helperId: helperId,
         response: response,
+        originalResponse: response,
+        isAccepted: response === "accepted" || response === "accept",
       },
     };
 
     console.log("=== RESPONSE DATA ===");
     console.log("Response data:", JSON.stringify(responseData, null, 2));
+    console.log("=== SUMMARY ===");
+    console.log("Request ID:", requestId);
+    console.log("Helper ID:", helperId);
+    console.log("Response:", response);
+    console.log("Final Status:", helperRequest.status);
+    console.log("Final AcceptedBy:", helperRequest.acceptedBy);
+    console.log("Is Accepted:", response === "accepted" || response === "accept");
 
     res.json(responseData);
   } catch (error) {
@@ -329,7 +375,7 @@ export const respondToHelperRequest = async (req: AuthenticatedRequest, res: Res
   }
 };
 
-// קבלת בקשות עזרה למתנדבת
+// Get helper requests for a helper
 export const getMyHelperRequests = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const helperId = req.user.id;
@@ -369,7 +415,7 @@ export const getMyHelperRequests = async (req: AuthenticatedRequest, res: Respon
   }
 };
 
-// קבלת בקשות עזרה של משתמש
+// Get helper requests created by the requester
 export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const requesterId = req.user.id;
@@ -377,14 +423,21 @@ export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: R
     console.log("=== GET MY REQUESTS AS REQUESTER ===");
     console.log("User ID (requester):", requesterId);
 
+    // Calculate the time five minutes ago
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    console.log("Five minutes ago:", fiveMinutesAgo);
+    console.log("Current time:", new Date());
+
     const requests = await HelperRequest.find({
       requesterId,
       status: { $in: ["pending", "accepted"] },
+      createdAt: { $gte: fiveMinutesAgo },
     });
 
     console.log("Found requests:", requests.length);
 
     requests.forEach((request, index) => {
+      const isRecent = request.createdAt >= fiveMinutesAgo;
       console.log(`Request ${index + 1}:`, {
         id: request._id,
         status: request.status,
@@ -393,10 +446,12 @@ export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: R
         acceptedBy: request.acceptedBy,
         createdAt: request.createdAt,
         expiresAt: request.expiresAt,
+        isRecent: isRecent,
+        timeDiff: Math.floor((Date.now() - request.createdAt.getTime()) / 1000) + " seconds ago",
       });
     });
 
-    // בדיקה מיוחדת לבקשות עם סטטוס accepted
+    // Inspection: accepted requests
     const acceptedRequests = requests.filter(req => req.status === "accepted");
     console.log("Accepted requests count:", acceptedRequests.length);
 
@@ -405,6 +460,22 @@ export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: R
         id: request._id,
         acceptedBy: request.acceptedBy,
         requesterId: request.requesterId,
+        status: request.status,
+        createdAt: request.createdAt,
+      });
+    });
+
+    // Inspection: pending requests
+    const pendingRequests = requests.filter(req => req.status === "pending");
+    console.log("Pending requests count:", pendingRequests.length);
+
+    pendingRequests.forEach((request, index) => {
+      console.log(`Pending Request ${index + 1}:`, {
+        id: request._id,
+        acceptedBy: request.acceptedBy,
+        requesterId: request.requesterId,
+        status: request.status,
+        createdAt: request.createdAt,
       });
     });
 
@@ -423,12 +494,38 @@ export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: R
         : [],
     }));
 
+    console.log("=== REQUESTS FOR CLIENT ===");
+    requestsForClient.forEach((request, index) => {
+      console.log(`Client Request ${index + 1}:`, {
+        id: request._id,
+        status: request.status,
+        acceptedBy: request.acceptedBy,
+        requesterId: request.requesterId,
+        createdAt: request.createdAt,
+      });
+    });
+
     res.json({
       success: true,
       data: requestsForClient,
       message: "Requests retrieved successfully",
       count: requests.length,
       acceptedCount: acceptedRequests.length,
+      debug: {
+        totalRequests: requests.length,
+        acceptedRequests: acceptedRequests.length,
+        pendingRequests: pendingRequests.length,
+        timeFilter: fiveMinutesAgo,
+        currentTime: new Date(),
+        message: acceptedRequests.length === 0 ? "No accepted requests found - check if status is being updated correctly" : `${acceptedRequests.length} accepted requests found`,
+        requestDetails: requests.map(r => ({
+          id: (r._id as any).toString(),
+          status: r.status,
+          acceptedBy: r.acceptedBy ? (r.acceptedBy as any).toString() : null,
+          createdAt: r.createdAt,
+          isRecent: r.createdAt >= fiveMinutesAgo,
+        })),
+      },
     });
   } catch (error) {
     console.error("Error getting requester requests:", error);
@@ -440,7 +537,7 @@ export const getMyRequestsAsRequester = async (req: AuthenticatedRequest, res: R
   }
 };
 
-// ניקוי בקשות ישנות
+// Cleanup expired requests
 export const cleanupExpiredRequests = async (): Promise<void> => {
   try {
     const result = await HelperRequest.updateMany(
@@ -459,15 +556,50 @@ export const cleanupExpiredRequests = async (): Promise<void> => {
   }
 };
 
-// בדיקת מצב Firebase
+// Check Firebase status
 export const checkFirebaseStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const status = await PushNotificationService.checkFirebaseStatus();
 
+    // Fetch helpers that have valid FCM tokens
+    const helpersWithFcmToken = await User.find({
+      isHelper: true,
+      fcmToken: { $exists: true, $ne: null },
+    })
+      .where("fcmToken")
+      .ne("")
+      .where("fcmToken")
+      .ne("null");
+
+    const totalHelpers = await User.countDocuments({ isHelper: true });
+
+    const sampleFcmTokens = helpersWithFcmToken.slice(0, 3).map(helper => ({
+      id: helper._id,
+      name: helper.fullName,
+      fcmToken: helper.fcmToken?.substring(0, 20) + "...",
+      hasValidToken: helper.fcmToken && helper.fcmToken.trim() !== "" && helper.fcmToken !== "null",
+    }));
+
     res.json({
       success: true,
       message: "Firebase status checked successfully",
-      data: status,
+      data: {
+        ...status,
+        totalHelpers,
+        helpersWithFcmToken: helpersWithFcmToken.length,
+        sampleFcmTokens: sampleFcmTokens.map(h => h.fcmToken),
+        sampleHelpers: sampleFcmTokens.map(h => ({
+          id: h.id,
+          name: h.name,
+          hasValidToken: h.hasValidToken,
+        })),
+        debugInfo: {
+          totalHelpers,
+          helpersWithFcmToken: helpersWithFcmToken.length,
+          percentage: totalHelpers > 0 ? Math.round((helpersWithFcmToken.length / totalHelpers) * 100) : 0,
+          message: helpersWithFcmToken.length === 0 ? "No helpers have FCM tokens - this is why notifications are not being sent" : `${helpersWithFcmToken.length} helpers have FCM tokens`,
+        },
+      },
     });
   } catch (error) {
     console.error("Error checking Firebase status:", error);
@@ -479,7 +611,7 @@ export const checkFirebaseStatus = async (req: AuthenticatedRequest, res: Respon
   }
 };
 
-// בדיקת בסיס הנתונים - DEBUG ONLY
+// Database inspection - DEBUG ONLY
 export const debugHelperRequests = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     console.log("=== DEBUG HELPER REQUESTS ===");

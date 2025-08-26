@@ -63,7 +63,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     res.status(400).json({
       message: "Please provide email and password",
       error: "ValidationError",
-      data: null
+      data: null,
     });
     return;
   }
@@ -86,13 +86,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const token = signJwt((userExists as IUser)._id!.toString());
     userExists.accessToken = token;
 
-    // ✅ ניקוי safeCircleContacts לפני שמירה – מונע שגיאת ולידציה
+    // ✅ Cleanup safeCircleContacts before saving – prevents validation error
     if (!Array.isArray(userExists.safeCircleContacts)) {
       userExists.safeCircleContacts = [];
     } else {
-      userExists.safeCircleContacts = userExists.safeCircleContacts.filter(
-        contact => contact.name && contact.phoneNumber
-      );
+      userExists.safeCircleContacts = userExists.safeCircleContacts.filter(contact => contact.name && contact.phoneNumber);
     }
 
     await userExists.save();
@@ -111,10 +109,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         city: userExists.city,
       },
     });
-
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Server Error" });
   }
 };
-

@@ -1,0 +1,62 @@
+### Test Call System
+
+### 1. Create a new call
+POST http://localhost:3001/api/calls
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requesterId": "REQUESTER_ID_HERE",
+  "helperId": "HELPER_ID_HERE",
+  "callId": "TWILIO_CALL_ID_HERE"
+}
+
+### 2. Disconnect a call
+POST http://localhost:3001/api/calls/CALL_ID_HERE/disconnect
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 3. Get active calls for current user
+GET http://localhost:3001/api/calls/active
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 4. Get call history for current user
+GET http://localhost:3001/api/calls/history?limit=10&offset=0
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 5. Test call flow:
+### Step 1: Create helper request
+POST http://localhost:3001/api/helper/request
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requesterId": "REQUESTER_ID_HERE",
+  "requesterName": "Test User",
+  "helperIds": ["HELPER_ID_HERE"]
+}
+
+### Step 2: Helper accepts request
+POST http://localhost:3001/api/helper/respond
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requestId": "REQUEST_ID_HERE",
+  "helperId": "HELPER_ID_HERE",
+  "response": "accepted"
+}
+
+### Step 3: Create call (after helper accepts)
+POST http://localhost:3001/api/calls
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "requesterId": "REQUESTER_ID_HERE",
+  "helperId": "HELPER_ID_HERE",
+  "callId": "TWILIO_CALL_ID_HERE"
+}
+
+### Step 4: Disconnect call (either user can disconnect)
+POST http://localhost:3001/api/calls/CALL_ID_HERE/disconnect
+Authorization: Bearer YOUR_TOKEN_HERE

@@ -3,14 +3,14 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface ICall extends Document {
   requesterId: mongoose.Types.ObjectId;
   helperId: mongoose.Types.ObjectId;
-  requestId?: mongoose.Types.ObjectId; // זיהוי בקשת העזרה שקדמה לשיחה
-  idempotencyKey?: string; // למניעת יצירה כפולה
+  requestId?: mongoose.Types.ObjectId; // Identifier of the helper request that preceded the call
+  idempotencyKey?: string; // Prevent duplicate creation
   status: "active" | "ended" | "disconnected";
   startedAt: Date;
   endedAt?: Date;
-  endedBy?: mongoose.Types.ObjectId; // מי ניתק את השיחה
-  duration?: number; // משך השיחה בשניות
-  callId?: string; // מזהה השיחה מ-Twilio או שירות אחר
+  endedBy?: mongoose.Types.ObjectId; // Who disconnected the call
+  duration?: number; // Call duration in seconds
+  callId?: string; // External call identifier (e.g., Twilio)
 }
 
 const CallSchema: Schema = new Schema<ICall>({
@@ -50,14 +50,14 @@ const CallSchema: Schema = new Schema<ICall>({
     ref: "User",
   },
   duration: {
-    type: Number, // משך השיחה בשניות
+    type: Number, // Call duration in seconds
   },
   callId: {
-    type: String, // מזהה השיחה מ-Twilio או שירות אחר
+    type: String, // External call identifier (e.g., Twilio)
   },
 });
 
-// אינדקסים לביצועים טובים יותר
+// Indexes for better performance
 CallSchema.index({ requesterId: 1, status: 1 });
 CallSchema.index({ helperId: 1, status: 1 });
 CallSchema.index({ status: 1, startedAt: -1 });
