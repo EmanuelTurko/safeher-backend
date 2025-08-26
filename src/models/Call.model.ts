@@ -58,6 +58,9 @@ const CallSchema: Schema = new Schema<ICall>({
 });
 
 // Indexes for better performance
+CallSchema.index({ requesterId: 1 });
+CallSchema.index({ helperId: 1 });
+CallSchema.index({ startedAt: -1 });
 CallSchema.index({ requesterId: 1, status: 1 });
 CallSchema.index({ helperId: 1, status: 1 });
 CallSchema.index({ status: 1, startedAt: -1 });

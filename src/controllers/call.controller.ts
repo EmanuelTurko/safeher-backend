@@ -3,6 +3,7 @@ import Call from "../models/Call.model";
 import User from "../models/User.model";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { PushNotificationService } from "../services/pushNotification.service";
+import mongoose from "mongoose";
 
 // Create a new call
 export const createCall = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -228,35 +229,110 @@ export const getActiveCalls = async (req: AuthenticatedRequest, res: Response): 
 export const getCallHistory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const currentUserId = req.user.id;
-    const { limit = 20, offset = 0 } = req.query;
+    const { limit = 50, offset = 0 } = req.query as { limit?: any; offset?: any };
+
+    const MAX_LIMIT = 100;
+    const parsedLimit = Math.min(Math.max(Number(limit) || 50, 0), MAX_LIMIT);
+    const parsedOffset = Math.max(Number(offset) || 0, 0);
 
     console.log("=== GET CALL HISTORY DEBUG ===");
     console.log("User ID:", currentUserId);
-    console.log("Limit:", limit, "Offset:", offset);
+    console.log("Limit:", parsedLimit, "Offset:", parsedOffset);
 
-    const calls = await Call.find({
-      $or: [{ requesterId: currentUserId }, { helperId: currentUserId }],
-      status: { $in: ["ended", "disconnected"] },
-    })
-      .populate("requesterId", "fullName")
-      .populate("helperId", "fullName")
-      .populate("endedBy", "fullName")
-      .sort({ endedAt: -1 })
-      .limit(Number(limit))
-      .skip(Number(offset));
+    const userObjectId = new mongoose.Types.ObjectId(currentUserId);
 
-    console.log("Found calls:", calls.length);
+    const pipeline: any[] = [
+      {
+        $match: {
+          $and: [
+            {
+              $or: [{ requesterId: userObjectId }, { helperId: userObjectId }],
+            },
+            { status: { $in: ["ended", "disconnected"] } },
+          ],
+        },
+      },
+      { $sort: { startedAt: -1 } },
+      { $skip: parsedOffset },
+      { $limit: parsedLimit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "requesterId",
+          foreignField: "_id",
+          as: "requester",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "helperId",
+          foreignField: "_id",
+          as: "helper",
+        },
+      },
+      {
+        $addFields: {
+          requester: { $arrayElemAt: ["$requester", 0] },
+          helper: { $arrayElemAt: ["$helper", 0] },
+          direction: {
+            $cond: [{ $eq: ["$requesterId", userObjectId] }, "outgoing", "incoming"],
+          },
+          // Determine other participant id and details
+          otherParticipantId: {
+            $cond: [{ $eq: ["$requesterId", userObjectId] }, "$helperId", "$requesterId"],
+          },
+          otherParticipantFullName: {
+            $cond: [{ $eq: ["$requesterId", userObjectId] }, { $ifNull: ["$helper.fullName", ""] }, { $ifNull: ["$requester.fullName", ""] }],
+          },
+          otherParticipantProfilePicture: {
+            $cond: [{ $eq: ["$requesterId", userObjectId] }, { $ifNull: ["$helper.profilePicture", ""] }, { $ifNull: ["$requester.profilePicture", ""] }],
+          },
+          mappedStatus: {
+            $cond: [{ $eq: [{ $ifNull: ["$duration", 0] }, 0] }, "missed", "disconnected"],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          requesterId: 1,
+          helperId: 1,
+          status: "$mappedStatus",
+          duration: { $ifNull: ["$duration", 0] },
+          startedAt: 1,
+          endedAt: 1,
+          endedBy: 1,
+          direction: 1,
+          otherParticipant: {
+            id: "$otherParticipantId",
+            fullName: "$otherParticipantFullName",
+            profilePicture: "$otherParticipantProfilePicture",
+          },
+        },
+      },
+    ];
 
-    // Convert ObjectIds to strings for client compatibility
-    const callsForClient = calls.map(call => ({
-      ...call.toObject(),
-      _id: (call._id as any).toString(),
-      requesterId: (call.requesterId as any).toString(),
-      helperId: (call.helperId as any).toString(),
-      endedBy: call.endedBy ? (call.endedBy as any).toString() : null,
+    const results = await Call.aggregate(pipeline);
+
+    const data = results.map((doc: any) => ({
+      id: doc._id.toString(),
+      requesterId: doc.requesterId.toString(),
+      helperId: doc.helperId.toString(),
+      direction: doc.direction,
+      otherParticipant: {
+        id: doc.otherParticipant?.id?.toString?.() || (doc.otherParticipant?.id ? String(doc.otherParticipant.id) : ""),
+        fullName: doc.otherParticipant?.fullName || "",
+        profilePicture: doc.otherParticipant?.profilePicture || "",
+      },
+      status: doc.status,
+      startedAt: doc.startedAt ? new Date(doc.startedAt).toISOString() : null,
+      endedAt: doc.endedAt ? new Date(doc.endedAt).toISOString() : null,
+      endedBy: doc.endedBy ? doc.endedBy.toString() : null,
+      duration: typeof doc.duration === "number" ? doc.duration : Number(doc.duration) || 0,
     }));
 
-    res.json({ message: "ok", data: callsForClient, error: null });
+    res.json({ message: "OK", data, error: null });
   } catch (error) {
     console.error("❌ Error getting call history:", error);
     res.status(500).json({ message: "error", data: null, error: error instanceof Error ? error.message : "unknown_error" });
