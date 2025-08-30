@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Call from "../models/Call.model";
 import User from "../models/User.model";
+import Favorite from "../models/Favorite.model";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { PushNotificationService } from "../services/pushNotification.service";
 import mongoose from "mongoose";
@@ -315,22 +316,31 @@ export const getCallHistory = async (req: AuthenticatedRequest, res: Response): 
 
     const results = await Call.aggregate(pipeline);
 
-    const data = results.map((doc: any) => ({
-      id: doc._id.toString(),
-      requesterId: doc.requesterId.toString(),
-      helperId: doc.helperId.toString(),
-      direction: doc.direction,
-      otherParticipant: {
-        id: doc.otherParticipant?.id?.toString?.() || (doc.otherParticipant?.id ? String(doc.otherParticipant.id) : ""),
-        fullName: doc.otherParticipant?.fullName || "",
-        profilePicture: doc.otherParticipant?.profilePicture || "",
-      },
-      status: doc.status,
-      startedAt: doc.startedAt ? new Date(doc.startedAt).toISOString() : null,
-      endedAt: doc.endedAt ? new Date(doc.endedAt).toISOString() : null,
-      endedBy: doc.endedBy ? doc.endedBy.toString() : null,
-      duration: typeof doc.duration === "number" ? doc.duration : Number(doc.duration) || 0,
-    }));
+    // Get user's favorites for efficient lookup
+    const userFavorites = await Favorite.find({ userId: userObjectId }).lean();
+    const favoriteUserIds = new Set(userFavorites.map(fav => fav.favoriteUserId.toString()));
+
+    const data = results.map((doc: any) => {
+      const otherParticipantId = doc.otherParticipant?.id?.toString?.() || (doc.otherParticipant?.id ? String(doc.otherParticipant.id) : "");
+
+      return {
+        id: doc._id.toString(),
+        requesterId: doc.requesterId.toString(),
+        helperId: doc.helperId.toString(),
+        direction: doc.direction,
+        otherParticipant: {
+          id: otherParticipantId,
+          fullName: doc.otherParticipant?.fullName || "",
+          profilePicture: doc.otherParticipant?.profilePicture || "",
+          isFavorite: favoriteUserIds.has(otherParticipantId),
+        },
+        status: doc.status,
+        startedAt: doc.startedAt ? new Date(doc.startedAt).toISOString() : null,
+        endedAt: doc.endedAt ? new Date(doc.endedAt).toISOString() : null,
+        endedBy: doc.endedBy ? doc.endedBy.toString() : null,
+        duration: typeof doc.duration === "number" ? doc.duration : Number(doc.duration) || 0,
+      };
+    });
 
     res.json({ message: "OK", data, error: null });
   } catch (error) {

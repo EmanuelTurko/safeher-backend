@@ -13,6 +13,7 @@ import { notificationRouter } from "./routes/notification.routes";
 import { helperRouter } from "./routes/helper.router";
 import { messageRouter } from "./routes/message.router";
 import callRouter from "./routes/call.router";
+import favoriteRouter from "./routes/favorite.router";
 import { cleanupExpiredRequests } from "./controllers/helper.controller";
 import { Server as SocketIOServer } from "socket.io";
 
@@ -52,6 +53,7 @@ export const appPromise = new Promise<[Express, Server<typeof IncomingMessage, t
     app.use("/api/helper", helperRouter);
     app.use("/api/messages", messageRouter);
     app.use("/api/calls", callRouter);
+    app.use("/api/favorites", favoriteRouter);
 
     // Start Express server
     const isProd = process.env.NODE_ENV === "production";

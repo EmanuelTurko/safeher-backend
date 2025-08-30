@@ -1,0 +1,26 @@
+### Test Favorites API
+
+### 1. Add user to favorites
+POST http://localhost:3001/api/favorites
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
+
+{
+  "favoriteUserId": "USER_ID_TO_ADD"
+}
+
+### 2. Get user's favorites list
+GET http://localhost:3001/api/favorites
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 3. Check if user is in favorites
+GET http://localhost:3001/api/favorites/check/USER_ID_TO_CHECK
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 4. Remove user from favorites
+DELETE http://localhost:3001/api/favorites/USER_ID_TO_REMOVE
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### 5. Test call history with favorites (should include isFavorite field)
+GET http://localhost:3001/api/calls/history?limit=10
+Authorization: Bearer YOUR_JWT_TOKEN
